@@ -1,0 +1,64 @@
+
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user role and association data.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["parent", "child"] },
+        "linkedParentUid": { "type": "string", "description": "For child accounts, the UID of the parent." },
+        "displayName": { "type": "string" }
+      },
+      "required": ["uid", "role"]
+    },
+    "Device": {
+      "title": "Device",
+      "description": "Managed device metadata.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "batteryLevel": { "type": "number" },
+        "lastSeen": { "type": "string", "format": "date-time" },
+        "isOnline": { "type": "boolean" },
+        "parentUid": { "type": "string" },
+        "childUid": { "type": "string" },
+        "currentLat": { "type": "number" },
+        "currentLng": { "type": "number" }
+      },
+      "required": ["id", "parentUid"]
+    },
+    "LocationLog": {
+      "title": "Location Log",
+      "description": "Historical GPS coordinates for tracking history.",
+      "type": "object",
+      "properties": {
+        "deviceId": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["deviceId", "latitude", "longitude", "timestamp"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com", "password"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles and roles."
+    },
+    "/devices/{deviceId}": {
+      "schema": "Device",
+      "description": "Active managed devices."
+    },
+    "/devices/{deviceId}/locations/{logId}": {
+      "schema": "LocationLog",
+      "description": "Location history logs for specific devices."
+    }
+  }
+}
