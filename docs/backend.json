@@ -31,17 +31,47 @@
       },
       "required": ["id", "parentUid"]
     },
-    "LocationLog": {
-      "title": "Location Log",
-      "description": "Historical GPS coordinates for tracking history.",
+    "CallLog": {
+      "title": "Call Log",
+      "description": "Log of incoming/outgoing calls including recording status.",
       "type": "object",
       "properties": {
         "deviceId": { "type": "string" },
-        "latitude": { "type": "number" },
-        "longitude": { "type": "number" },
+        "phoneNumber": { "type": "string" },
+        "contactName": { "type": "string" },
+        "type": { "type": "string", "enum": ["incoming", "outgoing", "missed"] },
+        "durationSeconds": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "isRecorded": { "type": "boolean" },
+        "recordingUrl": { "type": "string" }
+      },
+      "required": ["deviceId", "phoneNumber", "type", "timestamp"]
+    },
+    "SmsLog": {
+      "title": "SMS Log",
+      "description": "History of text messages.",
+      "type": "object",
+      "properties": {
+        "deviceId": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "messageBody": { "type": "string" },
+        "type": { "type": "string", "enum": ["inbox", "sent"] },
         "timestamp": { "type": "string", "format": "date-time" }
       },
-      "required": ["deviceId", "latitude", "longitude", "timestamp"]
+      "required": ["deviceId", "phoneNumber", "messageBody", "timestamp"]
+    },
+    "NotificationLog": {
+      "title": "Notification Log",
+      "description": "Intercepted notifications from social media and other apps.",
+      "type": "object",
+      "properties": {
+        "deviceId": { "type": "string" },
+        "appName": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["deviceId", "appName", "timestamp"]
     }
   },
   "auth": {
@@ -56,9 +86,17 @@
       "schema": "Device",
       "description": "Active managed devices."
     },
-    "/devices/{deviceId}/locations/{logId}": {
-      "schema": "LocationLog",
-      "description": "Location history logs for specific devices."
+    "/devices/{deviceId}/calls/{callId}": {
+      "schema": "CallLog",
+      "description": "Historical call logs."
+    },
+    "/devices/{deviceId}/sms/{smsId}": {
+      "schema": "SmsLog",
+      "description": "Historical SMS logs."
+    },
+    "/devices/{deviceId}/notifications/{notifId}": {
+      "schema": "NotificationLog",
+      "description": "Intercepted notifications."
     }
   }
 }
