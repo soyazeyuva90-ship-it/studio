@@ -1,8 +1,9 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Shield, MapPin, Battery, Lock, ArrowRight, Smartphone, CheckCircle2, Download, Eye, Activity, SmartphoneNfc } from "lucide-react";
+import { Shield, MapPin, Lock, ArrowRight, Download, CheckCircle2, Activity, SmartphoneNfc } from "lucide-react";
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 
@@ -27,21 +28,25 @@ export default function LandingPage() {
           </h1>
           
           <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed animate-fade-in-up delay-100">
-            A transparent, encrypted ecosystem for family safety. Monitor locations, device health, and communication patterns with peace of mind.
+            A transparent, encrypted ecosystem for family safety. Monitor locations, device health, and communication patterns with end-to-end security.
           </p>
           
           <div className="flex flex-col sm:flex-row justify-center gap-6 animate-fade-in-up delay-200">
             <Link href="/login?role=parent">
               <Button size="lg" className="h-16 px-12 text-lg gap-3 rounded-[2rem] font-black shadow-2xl shadow-primary/40 group bg-primary hover:bg-primary/90">
-                Setup Parent Hub <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                Parent Dashboard Login <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
             <Link href="/device">
               <Button size="lg" variant="outline" className="h-16 px-12 text-lg gap-3 rounded-[2rem] border-white/10 font-black hover:bg-white/5 transition-all">
-                <Download className="w-5 h-5" /> Install Child Agent
+                <Download className="w-5 h-5" /> Download Child Agent
               </Button>
             </Link>
           </div>
+          
+          <p className="mt-8 text-xs text-muted-foreground animate-fade-in-up delay-300">
+            New users must register via the Child Agent application to link devices.
+          </p>
         </section>
 
         {/* Device Sync Visualizer */}
@@ -66,7 +71,7 @@ export default function LandingPage() {
                 <Lock className="text-accent w-8 h-8" />
               </div>
               <h3 className="text-2xl font-black mb-4 uppercase tracking-tighter">Encrypted</h3>
-              <p className="text-muted-foreground leading-relaxed">All data is end-to-end encrypted. Only verified parents can access the monitoring dashboard.</p>
+              <p className="text-muted-foreground leading-relaxed">All data is end-to-end encrypted. Only verified parent accounts can access the monitoring dashboard.</p>
             </div>
           </div>
         </section>

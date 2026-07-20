@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -59,9 +60,9 @@ export function Navbar() {
                 Login
               </Button>
             </Link>
-            <Link href="/login?role=parent">
+            <Link href="/device">
               <Button className="bg-primary hover:bg-primary/90 text-white rounded-full px-6 shadow-lg shadow-primary/20">
-                Get Started
+                Install Agent
               </Button>
             </Link>
           </>

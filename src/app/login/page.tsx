@@ -3,15 +3,14 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/firebase";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { useAuth, useFirestore } from "@/firebase";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
-import { useFirestore } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Shield, User, Smartphone, Loader2 } from "lucide-react";
+import { Shield, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 function LoginFormContent() {
@@ -32,14 +31,21 @@ function LoginFormContent() {
 
     setLoading(true);
     try {
-      if (isSignUp) {
+      if (isSignUp && initialRole === "child") {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const displayName = email.split("@")[0];
+        
+        await updateProfile(userCredential.user, { displayName });
+        
         await setDoc(doc(db, "users", userCredential.user.uid), {
           uid: userCredential.user.uid,
           email,
-          role: initialRole,
-          displayName: email.split("@")[0]
+          role: "child",
+          displayName: displayName,
+          createdAt: new Date().toISOString()
         });
+        
+        router.push("/device");
       } else {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
@@ -70,16 +76,16 @@ function LoginFormContent() {
             <Shield className="text-white w-7 h-7" />
           </div>
           <CardTitle className="text-3xl font-bold">
-            {initialRole === "parent" ? "Parent Access" : "Device Setup"}
+            {initialRole === "parent" ? "Parent Access" : "Agent Setup"}
           </CardTitle>
           <CardDescription>
-            {isSignUp ? "Create your family account" : "Sign in to manage your devices"}
+            {isSignUp ? "Create your SafeGuard account" : "Sign in to access your family dashboard"}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email Address</Label>
               <Input 
                 id="email" 
                 type="email" 
@@ -87,6 +93,7 @@ function LoginFormContent() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="bg-background/50 border-white/10 focus:border-primary"
               />
             </div>
             <div className="space-y-2">
@@ -97,20 +104,29 @@ function LoginFormContent() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="bg-background/50 border-white/10 focus:border-primary"
               />
             </div>
-            <Button className="w-full h-12" disabled={loading}>
-              {loading ? <Loader2 className="animate-spin" /> : (isSignUp ? "Register" : "Login")}
+            <Button className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-bold" disabled={loading}>
+              {loading ? <Loader2 className="animate-spin" /> : (isSignUp ? "Create Account" : "Sign In")}
             </Button>
-            <div className="text-center text-sm">
-              <button 
-                type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="text-primary hover:underline"
-              >
-                {isSignUp ? "Already have an account? Log in" : "Need an account? Sign up"}
-              </button>
-            </div>
+            
+            {initialRole === "child" ? (
+              <div className="text-center text-sm">
+                <button 
+                  type="button"
+                  onClick={() => setIsSignUp(!isSignUp)}
+                  className="text-primary hover:underline font-medium"
+                >
+                  {isSignUp ? "Already have an account? Sign in" : "Need to register? Create account"}
+                </button>
+              </div>
+            ) : (
+              <div className="text-center text-xs text-muted-foreground mt-4">
+                Signups are restricted to the SafeGuard Mobile Agent. 
+                Please install the application on the target device to register.
+              </div>
+            )}
           </form>
         </CardContent>
       </Card>
