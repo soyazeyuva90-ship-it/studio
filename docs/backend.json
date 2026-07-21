@@ -9,69 +9,67 @@
         "uid": { "type": "string" },
         "email": { "type": "string" },
         "role": { "type": "string", "enum": ["parent", "child"] },
-        "linkedParentUid": { "type": "string", "description": "For child accounts, the UID of the parent." },
         "displayName": { "type": "string" }
       },
       "required": ["uid", "role"]
     },
     "Device": {
       "title": "Device",
-      "description": "Managed device metadata.",
+      "description": "Managed device metadata and real-time status.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "userId": { "type": "string" },
         "name": { "type": "string" },
+        "model": { "type": "string" },
+        "osVersion": { "type": "string" },
         "batteryLevel": { "type": "number" },
-        "lastSeen": { "type": "string", "format": "date-time" },
         "isOnline": { "type": "boolean" },
-        "parentUid": { "type": "string" },
-        "childUid": { "type": "string" },
-        "currentLat": { "type": "number" },
-        "currentLng": { "type": "number" }
+        "lastSeen": { "type": "string", "format": "date-time" },
+        "settings": { "type": "object" }
       },
-      "required": ["id", "parentUid"]
+      "required": ["id", "userId"]
     },
     "CallLog": {
       "title": "Call Log",
-      "description": "Log of incoming/outgoing calls including recording status.",
       "type": "object",
       "properties": {
-        "deviceId": { "type": "string" },
         "phoneNumber": { "type": "string" },
         "contactName": { "type": "string" },
-        "type": { "type": "string", "enum": ["incoming", "outgoing", "missed"] },
-        "durationSeconds": { "type": "number" },
-        "timestamp": { "type": "string", "format": "date-time" },
-        "isRecorded": { "type": "boolean" },
-        "recordingUrl": { "type": "string" }
-      },
-      "required": ["deviceId", "phoneNumber", "type", "timestamp"]
+        "type": { "type": "string", "enum": ["INCOMING", "OUTGOING", "MISSED"] },
+        "duration": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
     },
     "SmsLog": {
       "title": "SMS Log",
-      "description": "History of text messages.",
       "type": "object",
       "properties": {
-        "deviceId": { "type": "string" },
-        "phoneNumber": { "type": "string" },
-        "messageBody": { "type": "string" },
-        "type": { "type": "string", "enum": ["inbox", "sent"] },
+        "address": { "type": "string" },
+        "body": { "type": "string" },
+        "type": { "type": "string", "enum": ["SENT", "RECEIVED"] },
         "timestamp": { "type": "string", "format": "date-time" }
-      },
-      "required": ["deviceId", "phoneNumber", "messageBody", "timestamp"]
+      }
     },
-    "NotificationLog": {
-      "title": "Notification Log",
-      "description": "Intercepted notifications from social media and other apps.",
+    "AppUsageLog": {
+      "title": "App Usage Log",
       "type": "object",
       "properties": {
-        "deviceId": { "type": "string" },
+        "packageName": { "type": "string" },
         "appName": { "type": "string" },
-        "title": { "type": "string" },
-        "content": { "type": "string" },
+        "durationSeconds": { "type": "number" },
         "timestamp": { "type": "string", "format": "date-time" }
-      },
-      "required": ["deviceId", "appName", "timestamp"]
+      }
+    },
+    "Command": {
+      "title": "Device Command",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["SYNC_NOW", "LOCK_DEVICE", "RECORD_AUDIO", "PING"] },
+        "status": { "type": "string", "enum": ["PENDING", "EXECUTED", "FAILED"] },
+        "payload": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
@@ -79,24 +77,14 @@
   },
   "firestore": {
     "/users/{userId}": {
-      "schema": "UserProfile",
-      "description": "User profiles and roles."
+      "schema": "UserProfile"
     },
     "/devices/{deviceId}": {
-      "schema": "Device",
-      "description": "Active managed devices."
+      "schema": "Device"
     },
-    "/devices/{deviceId}/calls/{callId}": {
-      "schema": "CallLog",
-      "description": "Historical call logs."
-    },
-    "/devices/{deviceId}/sms/{smsId}": {
-      "schema": "SmsLog",
-      "description": "Historical SMS logs."
-    },
-    "/devices/{deviceId}/notifications/{notifId}": {
-      "schema": "NotificationLog",
-      "description": "Intercepted notifications."
-    }
+    "/devices/{deviceId}/calls/{id}": { "schema": "CallLog" },
+    "/devices/{deviceId}/sms/{id}": { "schema": "SmsLog" },
+    "/devices/{deviceId}/usage/{id}": { "schema": "AppUsageLog" },
+    "/devices/{deviceId}/commands/{id}": { "schema": "Command" }
   }
 }
