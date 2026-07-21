@@ -22,15 +22,18 @@ export default function DeviceAgent() {
   const [lat, setLat] = useState(40.7128);
   const [lng, setLng] = useState(-74.0060);
 
+  // If not logged in, force registration on the "app"
   useEffect(() => {
-    if (!authLoading && !user) router.push("/login?role=child");
+    if (!authLoading && !user) {
+      router.push("/login?role=child");
+    }
   }, [user, authLoading, router]);
 
-  // Simulated Foreground Service Logic
+  // Real-time Telemetry Service Simulation
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isReporting && db && user) {
-      interval = setInterval(() => {
+      interval = setInterval(async () => {
         const newLat = lat + (Math.random() - 0.5) * 0.0002;
         const newLng = lng + (Math.random() - 0.5) * 0.0002;
         const newBattery = Math.max(1, battery - 0.01);
@@ -42,13 +45,13 @@ export default function DeviceAgent() {
         const deviceId = `device_${user.uid}`;
         const deviceRef = doc(db, "devices", deviceId);
         
-        setDoc(deviceRef, {
+        await setDoc(deviceRef, {
           id: deviceId,
-          name: `${user.displayName || user.email?.split("@")[0]}'s Primary Device`,
+          name: `${user.displayName || user.email?.split("@")[0]}'s Managed Phone`,
           batteryLevel: Math.floor(newBattery),
           lastSeen: new Date().toISOString(),
           isOnline: true,
-          parentUid: user.uid, // Simulated linking
+          parentUid: user.uid, // In this model, the parent logs into the same account
           childUid: user.uid,
           currentLat: newLat,
           currentLng: newLng
@@ -63,7 +66,7 @@ export default function DeviceAgent() {
     setIsCalling(true);
     const deviceId = `device_${user.uid}`;
     
-    // Simulate Surround Recording completion
+    // Simulate Foreground Recording completion
     setTimeout(async () => {
       await addDoc(collection(db, "devices", deviceId, "calls"), {
         deviceId,
@@ -77,8 +80,8 @@ export default function DeviceAgent() {
       });
       setIsCalling(false);
       toast({
-        title: "Security Event Uploaded",
-        description: "Encrypted call recording synced to Parent Hub."
+        title: "Call Sync Complete",
+        description: "Encrypted log & recording sent to Parent Hub."
       });
     }, 5000);
   }
@@ -96,7 +99,7 @@ export default function DeviceAgent() {
         break;
       case 'Snapchat':
         title = "New Snap from Chloe";
-        content = "Click to view snap - Intercepted preview: 'Check this out!'";
+        content = "Intercepted preview: 'Check this out!'";
         break;
       case 'Instagram':
         title = "Instagram Direct: @lexi_v";
@@ -111,24 +114,23 @@ export default function DeviceAgent() {
       content,
       timestamp: new Date().toISOString()
     });
-    toast({ title: `${platform} Intercepted`, description: "Social notification captured and synced." });
+    toast({ title: `${platform} Intercepted`, description: "Social log sent to Dashboard." });
   }
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-black"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>;
 
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 sm:p-12 selection:bg-primary/40">
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 selection:bg-primary/40">
       <div className="w-full max-w-sm space-y-10">
         
         {/* Fake OS Status Bar */}
         <header className="flex justify-between items-center text-white/40 px-4">
           <div className="flex items-center gap-2 font-black text-[10px] uppercase tracking-[0.2em]">
-            <ShieldCheck className="w-4 h-4 text-primary animate-pulse" /> 
-            SafeGuard Agent ACTIVE
+            <ShieldCheck className="w-4 h-4 text-primary" /> 
+            AGENT ACTIVE
           </div>
           <div className="flex items-center gap-4">
             <Signal className="w-4 h-4" />
-            <Wifi className="w-4 h-4" />
             <div className="flex items-center gap-1.5">
                <span className="text-[10px] font-black">{Math.floor(battery)}%</span>
                <Battery className="w-4 h-4 text-green-500" />
@@ -144,23 +146,17 @@ export default function DeviceAgent() {
               <div className="w-24 h-1.5 bg-white/5 absolute top-5 rounded-full" />
               
               {isCalling ? (
-                <>
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-primary/20 blur-xl animate-pulse rounded-full" />
-                    <Mic className="w-16 h-16 text-primary animate-bounce relative z-10" />
-                  </div>
-                  <div className="text-center space-y-1">
-                    <span className="text-[8px] text-primary font-black uppercase tracking-[0.2em]">Surround Rec</span>
-                    <p className="text-[10px] text-white/50">Uploading...</p>
-                  </div>
-                </>
+                <div className="text-center space-y-2 relative z-10">
+                  <Mic className="w-12 h-12 text-primary animate-pulse mx-auto" />
+                  <p className="text-[8px] text-primary font-black uppercase tracking-widest">Recording...</p>
+                </div>
               ) : (
                 <>
-                  <div className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-500 ${isReporting ? 'bg-primary/20 text-primary scale-110' : 'bg-white/5 text-white/10'}`}>
-                    <Radio className={`w-12 h-12 ${isReporting ? 'animate-ping' : ''}`} />
+                  <div className={`w-20 h-20 rounded-full flex items-center justify-center transition-all duration-500 ${isReporting ? 'bg-primary/20 text-primary' : 'bg-white/5 text-white/10'}`}>
+                    <Radio className={`w-10 h-10 ${isReporting ? 'animate-ping' : ''}`} />
                   </div>
-                  <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] text-center leading-relaxed">
-                    {isReporting ? "Syncing\nTelemetry" : "Agent\nPaused"}
+                  <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.3em] text-center leading-relaxed">
+                    {isReporting ? "Live Sync\nActive" : "Agent\nPaused"}
                   </span>
                 </>
               )}
@@ -169,65 +165,57 @@ export default function DeviceAgent() {
         </div>
 
         {/* Agent Controls */}
-        <Card className="bg-zinc-900/90 border-white/5 backdrop-blur-3xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden rounded-[3rem] border-t-white/10">
+        <Card className="bg-zinc-900 border-white/5 shadow-2xl overflow-hidden rounded-[3rem]">
           <CardHeader className="text-center pb-2">
-            <CardTitle className="text-2xl font-black tracking-tight text-white">Agent Control</CardTitle>
-            <CardDescription className="text-[9px] font-black text-white/20 uppercase tracking-widest pt-1">SafeGuard Secure v2.9</CardDescription>
+            <CardTitle className="text-xl font-black text-white">SafeGuard Agent</CardTitle>
+            <CardDescription className="text-[9px] font-black text-white/20 uppercase tracking-widest">Version 2.9.1 (Stable)</CardDescription>
           </CardHeader>
-          <CardContent className="p-8 space-y-8">
+          <CardContent className="p-8 space-y-6">
             <Button 
-              className={`w-full h-16 rounded-3xl text-lg font-black tracking-tight transition-all active:scale-95 ${
-                isReporting ? 'bg-destructive/20 text-destructive border border-destructive/20 hover:bg-destructive/30' : 'bg-primary shadow-2xl shadow-primary/30 hover:bg-primary/90 text-white'
+              className={`w-full h-14 rounded-2xl text-md font-black transition-all ${
+                isReporting ? 'bg-destructive/20 text-destructive border border-destructive/20' : 'bg-primary text-white'
               }`}
               onClick={() => setIsReporting(!isReporting)}
             >
-              {isReporting ? <><Power className="w-5 h-5 mr-2" /> Stop Agent Service</> : <><ShieldCheck className="w-5 h-5 mr-2" /> Start Safety Sync</>}
+              {isReporting ? <Power className="w-4 h-4 mr-2" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
+              {isReporting ? 'Stop Background Service' : 'Start Monitoring Service'}
             </Button>
 
-            <div className="grid grid-cols-2 gap-4">
-                <button disabled={isCalling} onClick={simulateCall} className="flex flex-col items-center justify-center p-6 rounded-3xl bg-white/5 border border-white/5 active:scale-95 hover:bg-white/10 transition-all gap-3 group">
-                  <div className="w-12 h-12 bg-green-500/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Phone className="text-green-500 w-6 h-6" />
-                  </div>
-                  <span className="text-[9px] font-black uppercase text-white/40">Sim Call</span>
+            <div className="grid grid-cols-2 gap-3">
+                <button disabled={isCalling} onClick={simulateCall} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all gap-2 group">
+                  <Phone className="text-green-500 w-5 h-5 group-hover:scale-110" />
+                  <span className="text-[8px] font-black uppercase text-white/40">Sim Call</span>
                 </button>
 
-                <button onClick={() => simulateSocial('WhatsApp')} className="flex flex-col items-center justify-center p-6 rounded-3xl bg-white/5 border border-white/5 active:scale-95 hover:bg-white/10 transition-all gap-3 group">
-                  <div className="w-12 h-12 bg-green-600/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <MessageCircle className="text-green-500 w-6 h-6" />
-                  </div>
-                  <span className="text-[9px] font-black uppercase text-white/40">WhatsApp</span>
+                <button onClick={() => simulateSocial('WhatsApp')} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all gap-2 group">
+                  <MessageCircle className="text-green-500 w-5 h-5 group-hover:scale-110" />
+                  <span className="text-[8px] font-black uppercase text-white/40">WhatsApp</span>
                 </button>
 
-                <button onClick={() => simulateSocial('Snapchat')} className="flex flex-col items-center justify-center p-6 rounded-3xl bg-white/5 border border-white/5 active:scale-95 hover:bg-white/10 transition-all gap-3 group">
-                  <div className="w-12 h-12 bg-yellow-500/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Ghost className="text-yellow-500 w-6 h-6" />
-                  </div>
-                  <span className="text-[9px] font-black uppercase text-white/40">Snapchat</span>
+                <button onClick={() => simulateSocial('Snapchat')} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all gap-2 group">
+                  <Ghost className="text-yellow-500 w-5 h-5 group-hover:scale-110" />
+                  <span className="text-[8px] font-black uppercase text-white/40">Snapchat</span>
                 </button>
 
-                <button onClick={() => simulateSocial('Instagram')} className="flex flex-col items-center justify-center p-6 rounded-3xl bg-white/5 border border-white/5 active:scale-95 hover:bg-white/10 transition-all gap-3 group">
-                  <div className="w-12 h-12 bg-pink-500/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Instagram className="text-pink-500 w-6 h-6" />
-                  </div>
-                  <span className="text-[9px] font-black uppercase text-white/40">Instagram</span>
+                <button onClick={() => simulateSocial('Instagram')} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all gap-2 group">
+                  <Instagram className="text-pink-500 w-5 h-5 group-hover:scale-110" />
+                  <span className="text-[8px] font-black uppercase text-white/40">Instagram</span>
                 </button>
             </div>
 
-            <div className="pt-6 border-t border-white/5">
-               <div className="flex items-center justify-between text-[10px] font-black text-white/20 uppercase tracking-widest">
-                  <div className="flex items-center gap-3">
-                    <MapPin className="w-3.5 h-3.5 text-secondary" />
-                    <span>LOC: {lat.toFixed(4)}, {lng.toFixed(4)}</span>
-                  </div>
-                  <Badge variant="outline" className="text-[8px] h-5 py-0 border-white/10 text-white/40 font-black">ENCRYPTED</Badge>
-               </div>
+            <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-[8px] font-black text-white/20 uppercase tracking-widest">
+                  <MapPin className="w-3 h-3 text-primary" />
+                  <span>GPS Sync: {isReporting ? 'OK' : 'OFF'}</span>
+                </div>
+                <Badge variant="outline" className="text-[8px] border-white/10 text-white/40">ENCRYPTED</Badge>
             </div>
           </CardContent>
         </Card>
 
-        <p className="text-center text-[10px] text-white/20 font-bold px-10 leading-relaxed uppercase tracking-widest">
-          Transparent monitoring enabled. A persistent notification is displayed while sync is active.
+        <p className="text-center text-[9px] text-white/20 font-bold px-10 leading-relaxed uppercase tracking-widest">
+          Account connected: {user?.email}<br/>
+          Persistent notification visible to user.
         </p>
       </div>
     </div>
