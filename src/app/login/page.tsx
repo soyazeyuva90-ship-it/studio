@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, Suspense, useEffect } from "react";
@@ -13,11 +14,6 @@ import { Shield, Loader2, Smartphone, AlertCircle, Terminal } from "lucide-react
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { isFirebaseConfigValid } from "@/firebase/config";
-
-/**
- * @fileOverview Standardized Login/Signup for SafeGuard.
- * Signups are strictly forced through the "Agent" context (role=child).
- */
 
 function LoginFormContent() {
   const router = useRouter();
@@ -37,7 +33,7 @@ function LoginFormContent() {
 
   useEffect(() => {
     if (!configValid) {
-      setError("Critical Configuration Error: Firebase API Key is missing. Please check your .env file.");
+      setError("Configuration Error: Firebase API Key is missing. Please set NEXT_PUBLIC_FIREBASE_API_KEY in your .env file.");
     }
   }, [configValid]);
 
@@ -53,17 +49,12 @@ function LoginFormContent() {
     setError(null);
 
     if (!configValid) {
-      setError("Cannot authenticate: Firebase is not configured.");
+      setError("Cannot authenticate: System not configured.");
       return;
     }
 
-    if (!auth || !db) {
-      setError("Initialization Error: Service not ready.");
-      return;
-    }
-
-    if (!email || !password) {
-      setError("Required: Email and Password.");
+    if (!auth || !auth.app) {
+      setError("System Initializing: Please try again in a moment.");
       return;
     }
 
@@ -83,25 +74,25 @@ function LoginFormContent() {
           createdAt: new Date().toISOString()
         });
 
-        toast({ title: "Agent Provisioned", description: "Node added to secure fleet." });
+        toast({ title: "Agent Active", description: "Node paired successfully." });
         router.push("/device");
       } else {
         await signInWithEmailAndPassword(auth, email, password);
-        toast({ title: "Authorized", description: "Vault access granted." });
+        toast({ title: "Authenticated", description: "Access granted." });
         router.push("/dashboard");
       }
     } catch (err: any) {
-      console.error("Authentication Fault:", err);
+      console.error("Auth Failure:", err);
       let message = "System Access Denied.";
       
-      if (err.code === 'auth/invalid-api-key' || err.message.includes('api-key-not-valid')) {
-        message = "Configuration Error: Invalid Firebase API Key. Check your environment variables.";
+      if (err.code === 'auth/invalid-api-key') {
+        message = "Invalid API Key. Please verify your environment configuration.";
       } else if (err.code === 'auth/user-not-found') {
-        message = "Identity not found. Registration must be completed via the Monitoring Agent.";
+        message = "No account found. Please register via the child agent first.";
       } else if (err.code === 'auth/wrong-password') {
-        message = "Incorrect vault credentials.";
+        message = "Invalid credentials.";
       } else if (err.code === 'auth/email-already-in-use') {
-        message = "This identity is already registered in the fleet.";
+        message = "Account already exists.";
       } else {
         message = err.message;
       }
@@ -109,7 +100,7 @@ function LoginFormContent() {
       setError(message);
       toast({
         variant: "destructive",
-        title: "Access Violation",
+        title: "Security Violation",
         description: message
       });
     } finally {
@@ -133,8 +124,8 @@ function LoginFormContent() {
           </CardTitle>
           <CardDescription className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">
             {isAgentSetup 
-              ? "Initialize endpoint telemetry." 
-              : "End-to-end encrypted dashboard."}
+              ? "Initialize endpoint monitoring." 
+              : "Access end-to-end encrypted dashboard."}
           </CardDescription>
         </CardHeader>
 
@@ -176,9 +167,9 @@ function LoginFormContent() {
             
             <Button 
               className="w-full h-16 bg-primary hover:bg-primary/90 text-white font-black rounded-2xl shadow-2xl shadow-primary/20 text-sm tracking-widest uppercase italic transition-all active:scale-[0.98]" 
-              disabled={loading || !configValid}
+              disabled={loading}
             >
-              {loading ? <Loader2 className="animate-spin" /> : (isAgentSetup ? "INITIATE PAIRING" : "BYPASS FIREWALL")}
+              {loading ? <Loader2 className="animate-spin" /> : (isAgentSetup ? "REGISTER AGENT" : "ACCESS DASHBOARD")}
             </Button>
             
             <div className="pt-4 flex flex-col items-center gap-4">
@@ -190,7 +181,7 @@ function LoginFormContent() {
               <p className="text-[9px] text-zinc-600 font-bold text-center uppercase tracking-widest px-8 leading-relaxed opacity-50">
                 {isAgentSetup 
                   ? "Monitored telemetry will be synced to the master control hub." 
-                  : "All logs are subject to end-to-end encryption protocols."}
+                  : "Accounts must be created via the child agent application."}
               </p>
             </div>
           </form>

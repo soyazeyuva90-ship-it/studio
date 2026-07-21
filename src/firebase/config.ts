@@ -23,16 +23,15 @@ export function isFirebaseConfigValid(): boolean {
   );
 }
 
-// Log detailed missing keys in development
 if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
   const missingKeys = Object.entries(firebaseConfig)
     .filter(([_, value]) => !value)
     .map(([key]) => key);
 
   if (missingKeys.length > 0) {
-    console.error(
-      `[SafeGuard] Missing Firebase Environment Variables: ${missingKeys.join(', ')}. ` +
-      `Ensure your .env file contains these variables with the NEXT_PUBLIC_ prefix.`
+    console.warn(
+      `[SafeGuard] Missing Firebase Keys: ${missingKeys.join(', ')}. ` +
+      `Check your .env file and ensure variables have the NEXT_PUBLIC_ prefix.`
     );
   }
 }
