@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Shield, Loader2, Smartphone, AlertCircle } from "lucide-react";
+import { Shield, Loader2, Smartphone, AlertCircle, Terminal } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { isFirebaseConfigValid } from "@/firebase/config";
 
 /**
  * @fileOverview Standardized Login/Signup for SafeGuard.
@@ -31,10 +32,15 @@ function LoginFormContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Only allow signup if the user is coming from the "Install Agent" path
   const isAgentSetup = roleContext === "child";
+  const configValid = isFirebaseConfigValid();
 
-  // Redirect if already logged in
+  useEffect(() => {
+    if (!configValid) {
+      setError("Critical Configuration Error: Firebase API Key is missing. Please check your .env file.");
+    }
+  }, [configValid]);
+
   useEffect(() => {
     if (user && !loading) {
       if (isAgentSetup) router.push("/device");
@@ -46,20 +52,24 @@ function LoginFormContent() {
     e.preventDefault();
     setError(null);
 
+    if (!configValid) {
+      setError("Cannot authenticate: Firebase is not configured.");
+      return;
+    }
+
     if (!auth || !db) {
-      setError("Firebase not properly initialized. Check your configuration.");
+      setError("Initialization Error: Service not ready.");
       return;
     }
 
     if (!email || !password) {
-      setError("Please fill in all fields.");
+      setError("Required: Email and Password.");
       return;
     }
 
     setLoading(true);
     try {
       if (isAgentSetup) {
-        // Create account on the child's device
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const displayName = email.split("@")[0];
         
@@ -73,27 +83,33 @@ function LoginFormContent() {
           createdAt: new Date().toISOString()
         });
 
-        toast({ title: "Agent Registered", description: "This device is now linked to your vault." });
+        toast({ title: "Agent Provisioned", description: "Node added to secure fleet." });
         router.push("/device");
       } else {
-        // Parent Login only
         await signInWithEmailAndPassword(auth, email, password);
-        toast({ title: "Authenticated", description: "Welcome back to the SafeGuard Hub." });
+        toast({ title: "Authorized", description: "Vault access granted." });
         router.push("/dashboard");
       }
     } catch (err: any) {
-      console.error("Auth error:", err);
-      let message = "An unexpected error occurred.";
-      if (err.code === 'auth/invalid-api-key') message = "Invalid Firebase API Key. Check .env file.";
-      else if (err.code === 'auth/user-not-found') message = "Account not found. Did you register via the Agent App?";
-      else if (err.code === 'auth/wrong-password') message = "Incorrect password.";
-      else if (err.code === 'auth/email-already-in-use') message = "This email is already registered.";
-      else message = err.message;
+      console.error("Authentication Fault:", err);
+      let message = "System Access Denied.";
+      
+      if (err.code === 'auth/invalid-api-key' || err.message.includes('api-key-not-valid')) {
+        message = "Configuration Error: Invalid Firebase API Key. Check your environment variables.";
+      } else if (err.code === 'auth/user-not-found') {
+        message = "Identity not found. Registration must be completed via the Monitoring Agent.";
+      } else if (err.code === 'auth/wrong-password') {
+        message = "Incorrect vault credentials.";
+      } else if (err.code === 'auth/email-already-in-use') {
+        message = "This identity is already registered in the fleet.";
+      } else {
+        message = err.message;
+      }
       
       setError(message);
       toast({
         variant: "destructive",
-        title: "Auth Error",
+        title: "Access Violation",
         description: message
       });
     } finally {
@@ -102,64 +118,79 @@ function LoginFormContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center p-6 selection:bg-primary/30">
-      <Card className="w-full max-w-md bg-zinc-900/50 border-white/5 shadow-2xl backdrop-blur-xl">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mb-6 shadow-2xl shadow-primary/20">
-            {isAgentSetup ? <Smartphone className="text-white w-8 h-8" /> : <Shield className="text-white w-8 h-8" />}
+    <div className="min-h-screen bg-[#020202] flex items-center justify-center p-6 selection:bg-primary/30">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent pointer-events-none" />
+      
+      <Card className="w-full max-w-md bg-zinc-900/40 border-white/5 shadow-3xl backdrop-blur-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+        
+        <CardHeader className="text-center pt-10">
+          <div className="mx-auto w-16 h-16 rounded-3xl bg-primary flex items-center justify-center mb-8 shadow-2xl shadow-primary/40 group">
+            {isAgentSetup ? <Smartphone className="text-white w-9 h-9" /> : <Shield className="text-white w-9 h-9" />}
           </div>
-          <CardTitle className="text-3xl font-bold text-white tracking-tighter">
-            {isAgentSetup ? "Agent Setup" : "Parent Portal"}
+          <CardTitle className="text-4xl font-black text-white tracking-tighter mb-2 uppercase italic">
+            {isAgentSetup ? "Agent Node" : "Command Hub"}
           </CardTitle>
-          <CardDescription className="text-zinc-500 font-medium">
+          <CardDescription className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">
             {isAgentSetup 
-              ? "Initialize this device into the SafeGuard fleet." 
-              : "Access real-time telemetry from your linked devices."}
+              ? "Initialize endpoint telemetry." 
+              : "End-to-end encrypted dashboard."}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+
+        <CardContent className="pb-10">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive">
+              <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive rounded-2xl">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Authentication Failed</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
+                <AlertTitle className="font-black uppercase text-[10px] tracking-widest">System Error</AlertTitle>
+                <AlertDescription className="text-xs font-medium opacity-90 leading-relaxed">{error}</AlertDescription>
               </Alert>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-zinc-400 text-xs font-black uppercase tracking-widest">Email Address</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder="admin@safeguard.io" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="bg-black/50 border-white/5 focus:border-primary h-12 rounded-xl text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-zinc-400 text-xs font-black uppercase tracking-widest">Vault Key</Label>
-              <Input 
-                id="password" 
-                type="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="bg-black/50 border-white/5 focus:border-primary h-12 rounded-xl text-white"
-              />
+            <div className="space-y-3">
+              <div className="space-y-1.5 px-1">
+                <Label htmlFor="email" className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em]">User Identification</Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="name@safeguard.net" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="bg-black/40 border-white/5 focus:border-primary/50 h-14 rounded-2xl text-white placeholder:text-zinc-700 transition-all"
+                />
+              </div>
+              <div className="space-y-1.5 px-1">
+                <Label htmlFor="password" className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em]">Secure Vault Key</Label>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="bg-black/40 border-white/5 focus:border-primary/50 h-14 rounded-2xl text-white transition-all"
+                />
+              </div>
             </div>
             
-            <Button className="w-full h-14 bg-primary hover:bg-primary/90 text-white font-black rounded-2xl shadow-xl shadow-primary/10" disabled={loading}>
-              {loading ? <Loader2 className="animate-spin" /> : (isAgentSetup ? "REGISTER AGENT" : "AUTHENTICATE")}
+            <Button 
+              className="w-full h-16 bg-primary hover:bg-primary/90 text-white font-black rounded-2xl shadow-2xl shadow-primary/20 text-sm tracking-widest uppercase italic transition-all active:scale-[0.98]" 
+              disabled={loading || !configValid}
+            >
+              {loading ? <Loader2 className="animate-spin" /> : (isAgentSetup ? "INITIATE PAIRING" : "BYPASS FIREWALL")}
             </Button>
             
-            <div className="text-center">
-              <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest leading-relaxed">
+            <div className="pt-4 flex flex-col items-center gap-4">
+              <div className="flex items-center gap-2 text-zinc-700">
+                <Terminal className="w-3 h-3" />
+                <span className="text-[8px] font-black uppercase tracking-[0.3em]">Status: Ready for Handshake</span>
+              </div>
+              
+              <p className="text-[9px] text-zinc-600 font-bold text-center uppercase tracking-widest px-8 leading-relaxed opacity-50">
                 {isAgentSetup 
-                  ? "This device will be visible to the master vault account." 
-                  : "Authorized personnel only. Logs are end-to-end encrypted."}
+                  ? "Monitored telemetry will be synced to the master control hub." 
+                  : "All logs are subject to end-to-end encryption protocols."}
               </p>
             </div>
           </form>

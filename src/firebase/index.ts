@@ -1,20 +1,29 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getAuth, Auth, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { firebaseConfig } from './config';
+import { firebaseConfig, isFirebaseConfigValid } from './config';
 
 /**
- * @fileOverview Centralized Firebase initialization with persistence configuration.
+ * @fileOverview Centralized Firebase initialization with safety checks.
  */
 
-export function initializeFirebase(): {
-  firebaseApp: FirebaseApp;
-  firestore: Firestore;
-  auth: Auth;
-} {
-  const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-  const firestore = getFirestore(firebaseApp);
-  const auth = getAuth(firebaseApp);
+let firebaseApp: FirebaseApp;
+let firestore: Firestore;
+let auth: Auth;
+
+export function initializeFirebase() {
+  if (!isFirebaseConfigValid()) {
+    throw new Error("Firebase configuration is invalid or missing. Check your environment variables.");
+  }
+
+  if (getApps().length === 0) {
+    firebaseApp = initializeApp(firebaseConfig);
+  } else {
+    firebaseApp = getApp();
+  }
+
+  firestore = getFirestore(firebaseApp);
+  auth = getAuth(firebaseApp);
 
   // Set persistence to local (survives browser restarts)
   if (typeof window !== 'undefined') {
