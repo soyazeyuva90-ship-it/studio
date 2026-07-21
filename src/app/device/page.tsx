@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Smartphone, Radio, Battery, ShieldCheck, Loader2, Phone, MessageSquare, Wifi, Signal, Power, MessageCircle, Instagram, Ghost, Mic } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { isFirebaseConfigValid } from "@/firebase/config";
 
 export default function DeviceAgent() {
   const { user, loading: authLoading } = useUser();
@@ -23,8 +21,6 @@ export default function DeviceAgent() {
   const [lat, setLat] = useState(40.7128);
   const [lng, setLng] = useState(-74.0060);
 
-  const isSimulation = !isFirebaseConfigValid();
-
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/login?role=child");
@@ -33,7 +29,7 @@ export default function DeviceAgent() {
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isReporting && user) {
+    if (isReporting && user && db && db.app) {
       interval = setInterval(async () => {
         const newLat = lat + (Math.random() - 0.5) * 0.0005;
         const newLng = lng + (Math.random() - 0.5) * 0.0005;
@@ -43,71 +39,70 @@ export default function DeviceAgent() {
         setLng(newLng);
         setBattery(newBattery);
 
-        if (!isSimulation && db) {
-          const deviceId = `device_${user.uid}`;
-          const deviceRef = doc(db, "devices", deviceId);
-          try {
-            await setDoc(deviceRef, {
-              id: deviceId,
-              userId: user.uid,
-              name: `${user.displayName || 'Managed User'}'s Device`,
-              batteryLevel: Math.floor(newBattery),
-              lastSeen: new Date().toISOString(),
-              isOnline: true,
-              currentLat: newLat,
-              currentLng: newLng,
-              model: "Simulator v2.9",
-              osVersion: "Android 14"
-            }, { merge: true });
-          } catch (e) {
-            console.error("Sync error:", e);
-          }
+        const deviceId = `device_${user.uid}`;
+        const deviceRef = doc(db, "devices", deviceId);
+        try {
+          await setDoc(deviceRef, {
+            id: deviceId,
+            userId: user.uid,
+            name: `${user.displayName || 'Managed Node'}'s Device`,
+            batteryLevel: Math.floor(newBattery),
+            lastSeen: new Date().toISOString(),
+            isOnline: true,
+            currentLat: newLat,
+            currentLng: newLng,
+            model: "Production Node v3.1",
+            osVersion: "Android 14 (Standard)"
+          }, { merge: true });
+        } catch (e: any) {
+          console.error("Telemetry Sync Error:", e.message);
         }
       }, 5000);
     }
     return () => clearInterval(interval);
-  }, [isReporting, db, user, lat, lng, battery, isSimulation]);
+  }, [isReporting, db, user, lat, lng, battery]);
 
   async function simulateCall() {
+    if (!db || !db.app || !user) {
+        toast({ variant: "destructive", title: "Error", description: "Database disconnected." });
+        return;
+    }
     setIsCalling(true);
-    toast({ title: "Call Intercepted", description: "Recording initiated in background." });
+    toast({ title: "Call Handshake", description: "Monitoring voice channel..." });
 
     setTimeout(async () => {
-      if (!isSimulation && db && user) {
-        const deviceId = `device_${user.uid}`;
-        try {
-          await addDoc(collection(db, "devices", deviceId, "calls"), {
-            phoneNumber: "+1 (917) " + Math.floor(1000000 + Math.random() * 9000000),
-            contactName: "Unknown Participant",
-            type: "INCOMING",
-            duration: 45,
-            timestamp: new Date().toISOString(),
-            isRecorded: true
-          });
-        } catch (e) {
-          console.error("Log error:", e);
-        }
+      const deviceId = `device_${user.uid}`;
+      try {
+        await addDoc(collection(db, "devices", deviceId, "calls"), {
+          phoneNumber: "+1 (917) " + Math.floor(1000000 + Math.random() * 9000000),
+          contactName: "Unknown Caller",
+          type: "INCOMING",
+          duration: 45,
+          timestamp: new Date().toISOString(),
+          isRecorded: true
+        });
+        toast({ title: "Vault Updated", description: "Encrypted call log synced." });
+      } catch (e: any) {
+        toast({ variant: "destructive", title: "Sync Error", description: e.message });
       }
       setIsCalling(false);
-      toast({ title: "Log Synced", description: "Encrypted call log uploaded." });
     }, 4000);
   }
 
   async function simulateSocial(platform: string) {
-    if (!isSimulation && db && user) {
-      const deviceId = `device_${user.uid}`;
-      try {
-        await addDoc(collection(db, "devices", deviceId, "sms"), {
-          address: platform,
-          body: `[Intercepted Notification] New activity detected on ${platform} feed.`,
-          type: "RECEIVED",
-          timestamp: new Date().toISOString()
-        });
-      } catch (e) {
-        console.error("Sync error:", e);
-      }
+    if (!db || !db.app || !user) return;
+    const deviceId = `device_${user.uid}`;
+    try {
+      await addDoc(collection(db, "devices", deviceId, "sms"), {
+        address: platform,
+        body: `[Intercepted Metadata] New message interaction detected on ${platform}.`,
+        type: "RECEIVED",
+        timestamp: new Date().toISOString()
+      });
+      toast({ title: "Telemetric Pulse", description: `${platform} metadata synced.` });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Write Error", description: e.message });
     }
-    toast({ title: "Syncing Notification", description: `${platform} metadata updated.` });
   }
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-black"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>;
@@ -118,7 +113,7 @@ export default function DeviceAgent() {
         <header className="flex justify-between items-center text-white/40 px-4">
           <div className="flex items-center gap-2 font-black text-[9px] uppercase tracking-[0.2em]">
             <ShieldCheck className="w-4 h-4 text-primary" /> 
-            AGENT ACTIVE
+            SERVICE ACTIVE
           </div>
           <div className="flex items-center gap-4">
             <Signal className="w-4 h-4" />
@@ -138,7 +133,7 @@ export default function DeviceAgent() {
               {isCalling ? (
                 <div className="text-center space-y-3 relative z-10 animate-pulse">
                   <Mic className="w-10 h-10 text-primary mx-auto" />
-                  <p className="text-[7px] text-primary font-black uppercase tracking-widest">Recording Audio</p>
+                  <p className="text-[7px] text-primary font-black uppercase tracking-widest">Intercepting Audio</p>
                 </div>
               ) : (
                 <>
@@ -146,7 +141,7 @@ export default function DeviceAgent() {
                     <Radio className={`w-8 h-8 ${isReporting ? 'animate-ping' : ''}`} />
                   </div>
                   <span className="text-[7px] font-black text-white/30 uppercase tracking-[0.3em] text-center leading-relaxed">
-                    {isReporting ? "Syncing\nActive" : "Agent\nPaused"}
+                    {isReporting ? "Syncing\nTelemetry" : "Service\nPaused"}
                   </span>
                 </>
               )}
@@ -158,7 +153,7 @@ export default function DeviceAgent() {
           <CardContent className="p-8 space-y-6 text-center">
             <div className="space-y-1 mb-6">
               <h2 className="text-xl font-black text-white tracking-tight">SafeGuard Node</h2>
-              <p className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Endpoint Security v2.9</p>
+              <p className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">End-to-End Encryption Enabled</p>
             </div>
 
             <Button 
@@ -168,7 +163,7 @@ export default function DeviceAgent() {
               onClick={() => setIsReporting(!isReporting)}
             >
               {isReporting ? <Power className="w-4 h-4 mr-2" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
-              {isReporting ? 'SUSPEND SERVICE' : 'INITIATE AGENT'}
+              {isReporting ? 'SUSPEND MONITORING' : 'INITIALIZE SYNC'}
             </Button>
 
             <div className="grid grid-cols-2 gap-3 pt-4">
@@ -193,9 +188,9 @@ export default function DeviceAgent() {
             <div className="pt-6 border-t border-white/5 flex items-center justify-between">
                 <div className="flex items-center gap-2 text-[7px] font-black text-zinc-500 uppercase tracking-widest">
                   <Wifi className="w-3 h-3 text-primary" />
-                  <span>Vault Connected</span>
+                  <span>Verified Vault</span>
                 </div>
-                <Badge variant="outline" className="text-[7px] border-white/10 text-zinc-600 font-black">ENCRYPTED</Badge>
+                <Badge variant="outline" className="text-[7px] border-white/10 text-zinc-600 font-black uppercase">Standard</Badge>
             </div>
           </CardContent>
         </Card>

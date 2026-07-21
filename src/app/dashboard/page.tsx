@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useUser, useCollection, useFirestore } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { collection, query, where, orderBy, limit, addDoc } from "firebase/firestore";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,7 +14,6 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { Navbar } from "@/components/Navbar";
-import { isFirebaseConfigValid } from "@/firebase/config";
 import { toast } from "@/hooks/use-toast";
 
 export default function AdvancedDashboard() {
@@ -23,31 +21,19 @@ export default function AdvancedDashboard() {
   const db = useFirestore();
   const router = useRouter();
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
-  
-  const isSimulation = !isFirebaseConfigValid();
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login");
   }, [user, authLoading, router]);
 
   const devicesQuery = useMemo(() => {
-    if (!db || !user || isSimulation) return null;
-    try {
-      return query(collection(db, "devices"), where("userId", "==", user.uid));
-    } catch (e) {
-      return null;
-    }
-  }, [db, user, isSimulation]);
+    if (!db || !user) return null;
+    return query(collection(db, "devices"), where("userId", "==", user.uid));
+  }, [db, user]);
 
   const { data: devices, loading: devicesLoading } = useCollection(devicesQuery);
 
-  // Mock data for simulation mode
-  const mockDevices = useMemo(() => [
-    { id: "mock-1", name: "John's iPhone 15", batteryLevel: 84, isOnline: true, model: "iPhone 15 Pro", osVersion: "iOS 17.4" },
-    { id: "mock-2", name: "Sarah's Galaxy S24", batteryLevel: 12, isOnline: false, model: "SM-G991B", osVersion: "Android 14" }
-  ], []);
-
-  const activeDevices = isSimulation ? mockDevices : (devices || []);
+  const activeDevices = devices || [];
 
   useEffect(() => {
     if (activeDevices.length > 0 && !selectedDeviceId) {
@@ -60,36 +46,23 @@ export default function AdvancedDashboard() {
   }, [activeDevices, selectedDeviceId]);
 
   const telemetryQueries = useMemo(() => {
-    if (!db || !selectedDeviceId || isSimulation) return { calls: null, sms: null, usage: null };
-    try {
-      return {
-        calls: query(collection(db, "devices", selectedDeviceId, "calls"), orderBy("timestamp", "desc"), limit(10)),
-        sms: query(collection(db, "devices", selectedDeviceId, "sms"), orderBy("timestamp", "desc"), limit(10)),
-        usage: query(collection(db, "devices", selectedDeviceId, "usage"), orderBy("timestamp", "desc"), limit(10))
-      };
-    } catch (e) {
-      return { calls: null, sms: null, usage: null };
-    }
-  }, [db, selectedDeviceId, isSimulation]);
+    if (!db || !selectedDeviceId) return { calls: null, sms: null, usage: null };
+    return {
+      calls: query(collection(db, "devices", selectedDeviceId, "calls"), orderBy("timestamp", "desc"), limit(20)),
+      sms: query(collection(db, "devices", selectedDeviceId, "sms"), orderBy("timestamp", "desc"), limit(20)),
+      usage: query(collection(db, "devices", selectedDeviceId, "usage"), orderBy("timestamp", "desc"), limit(20))
+    };
+  }, [db, selectedDeviceId]);
 
   const { data: calls } = useCollection(telemetryQueries.calls);
   const { data: sms } = useCollection(telemetryQueries.sms);
   const { data: usage } = useCollection(telemetryQueries.usage);
 
-  // Mock Telemetry for Simulation
-  const mockCalls = [{ id: "c1", contactName: "David Miller", type: "INCOMING", duration: 124, timestamp: new Date().toISOString() }];
-  const mockSms = [{ id: "s1", address: "WhatsApp", body: "Checking in on the project status.", timestamp: new Date().toISOString() }];
-  const mockUsage = [{ id: "u1", appName: "Snapchat", packageName: "com.snapchat.android", durationSeconds: 3600 }];
-
-  const activeCalls = isSimulation ? mockCalls : (calls || []);
-  const activeSms = isSimulation ? mockSms : (sms || []);
-  const activeUsage = isSimulation ? mockUsage : (usage || []);
+  const activeCalls = calls || [];
+  const activeSms = sms || [];
+  const activeUsage = usage || [];
 
   async function sendRemoteCommand(commandType: string) {
-    if (isSimulation) {
-      toast({ title: "Simulation Command", description: `${commandType} triggered in sandbox.` });
-      return;
-    }
     if (!db || !selectedDeviceId) return;
     try {
       await addDoc(collection(db, "devices", selectedDeviceId, "commands"), {
@@ -99,12 +72,12 @@ export default function AdvancedDashboard() {
         payload: {}
       });
       toast({ title: "Command Queued", description: `${commandType} sent to device.` });
-    } catch (e) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to send command." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Sync Failed", description: e.message });
     }
   }
 
-  if (authLoading || (devicesLoading && !isSimulation)) {
+  if (authLoading || devicesLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>;
   }
 
@@ -129,7 +102,7 @@ export default function AdvancedDashboard() {
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Global Status</p>
-              <p className="text-2xl font-bold text-white">{isSimulation ? 'Sandbox' : 'Encrypted'}</p>
+              <p className="text-2xl font-bold text-white">Live Sync</p>
             </div>
           </Card>
           <Card className="bg-zinc-900/50 border-white/5 p-4 flex items-center gap-4">
@@ -137,8 +110,8 @@ export default function AdvancedDashboard() {
               <Activity className="w-6 h-6 text-blue-500" />
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Events Today</p>
-              <p className="text-2xl font-bold text-white">128</p>
+              <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Total Events</p>
+              <p className="text-2xl font-bold text-white">{activeCalls.length + activeSms.length}</p>
             </div>
           </Card>
           <Card className="bg-zinc-900/50 border-white/5 p-4 flex items-center gap-4">
@@ -146,8 +119,8 @@ export default function AdvancedDashboard() {
               <Zap className="w-6 h-6 text-yellow-500" />
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">AI Readiness</p>
-              <p className="text-2xl font-bold text-white">98%</p>
+              <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Node Health</p>
+              <p className="text-2xl font-bold text-white">Optimal</p>
             </div>
           </Card>
         </div>
@@ -155,8 +128,12 @@ export default function AdvancedDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-3 space-y-6">
             <div className="space-y-3">
-              <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-2">Device Fleet</h3>
-              {activeDevices.map(device => (
+              <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-2">Monitored Fleet</h3>
+              {activeDevices.length === 0 ? (
+                <div className="p-4 bg-zinc-900/30 border border-white/5 rounded-2xl text-[10px] font-bold text-zinc-600 text-center uppercase tracking-widest">
+                  No devices connected.
+                </div>
+              ) : activeDevices.map(device => (
                 <button
                   key={device.id}
                   onClick={() => setSelectedDeviceId(device.id)}
@@ -172,7 +149,7 @@ export default function AdvancedDashboard() {
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <p className="font-bold text-white truncate text-sm">{device.name}</p>
-                      <p className="text-[10px] text-muted-foreground font-medium">{device.isOnline ? 'Active Now' : 'Offline'}</p>
+                      <p className="text-[10px] text-muted-foreground font-medium">{device.isOnline ? 'Online Now' : 'Last seen ' + format(new Date(device.lastSeen), "HH:mm")}</p>
                     </div>
                   </div>
                 </button>
@@ -218,12 +195,12 @@ export default function AdvancedDashboard() {
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="bg-white/5 p-3 rounded-2xl border border-white/5">
-                          <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Network</p>
-                          <p className="text-xs font-black text-white">4G LTE</p>
+                          <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Model</p>
+                          <p className="text-xs font-black text-white truncate">{currentDevice.model}</p>
                         </div>
                         <div className="bg-white/5 p-3 rounded-2xl border border-white/5">
-                          <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Status</p>
-                          <p className="text-xs font-black text-white">{currentDevice.isOnline ? 'Online' : 'Offline'}</p>
+                          <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">OS</p>
+                          <p className="text-xs font-black text-white">{currentDevice.osVersion}</p>
                         </div>
                       </div>
                     </CardContent>
@@ -233,14 +210,14 @@ export default function AdvancedDashboard() {
                     <div className="absolute inset-0 bg-[#111] opacity-50" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #333 1px, transparent 0)', backgroundSize: '24px 24px' }} />
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="text-center space-y-4 z-10">
-                        <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto border border-primary/30 animate-pulse">
+                        <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto border border-primary/30">
                           <MapIcon className="w-8 h-8 text-primary" />
                         </div>
                         <div className="space-y-1">
-                          <p className="text-lg font-black text-white">Live Tracking Active</p>
-                          <p className="text-xs text-muted-foreground">Coordinates: 40.7128° N, 74.0060° W</p>
+                          <p className="text-lg font-black text-white">Positioning Handshake</p>
+                          <p className="text-xs text-muted-foreground">Coordinates: {currentDevice.currentLat?.toFixed(4)}° N, {currentDevice.currentLng?.toFixed(4)}° W</p>
                         </div>
-                        <Button variant="secondary" className="rounded-full font-bold text-xs h-9 px-6">Open High-Res Map</Button>
+                        <Button variant="secondary" className="rounded-full font-bold text-xs h-9 px-6">View Mapping Suite</Button>
                       </div>
                     </div>
                   </Card>
@@ -249,14 +226,16 @@ export default function AdvancedDashboard() {
                 <Card className="bg-zinc-900/50 border-white/5 rounded-[2.5rem] overflow-hidden">
                   <Tabs defaultValue="calls" className="w-full">
                     <TabsList className="w-full justify-start h-16 bg-white/5 border-b border-white/5 rounded-none px-8 gap-10">
-                      <TabsTrigger value="calls" className="data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 text-xs font-black uppercase tracking-widest">Call Logs</TabsTrigger>
+                      <TabsTrigger value="calls" className="data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 text-xs font-black uppercase tracking-widest">Call History</TabsTrigger>
                       <TabsTrigger value="sms" className="data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 text-xs font-black uppercase tracking-widest">SMS Center</TabsTrigger>
-                      <TabsTrigger value="usage" className="data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 text-xs font-black uppercase tracking-widest">App Usage</TabsTrigger>
+                      <TabsTrigger value="usage" className="data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 text-xs font-black uppercase tracking-widest">App Statistics</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="calls" className="m-0 p-0">
                       <div className="divide-y divide-white/5">
-                        {activeCalls.map((call: any) => (
+                        {activeCalls.length === 0 ? (
+                          <div className="p-20 text-center text-zinc-700 font-bold uppercase tracking-widest text-[10px]">No telemetry found.</div>
+                        ) : activeCalls.map((call: any) => (
                           <div key={call.id} className="p-6 flex items-center justify-between hover:bg-white/5 transition-colors">
                             <div className="flex items-center gap-6">
                               <div className={`w-10 h-10 rounded-full flex items-center justify-center ${call.type === 'MISSED' ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'}`}>
@@ -279,7 +258,9 @@ export default function AdvancedDashboard() {
 
                     <TabsContent value="sms" className="m-0 p-0">
                       <div className="divide-y divide-white/5">
-                        {activeSms.map((msg: any) => (
+                        {activeSms.length === 0 ? (
+                          <div className="p-20 text-center text-zinc-700 font-bold uppercase tracking-widest text-[10px]">No logs detected.</div>
+                        ) : activeSms.map((msg: any) => (
                           <div key={msg.id} className="p-6 flex gap-4 hover:bg-white/5 transition-colors">
                             <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
                               <MessageSquare className="w-5 h-5" />
@@ -298,7 +279,9 @@ export default function AdvancedDashboard() {
 
                     <TabsContent value="usage" className="m-0 p-0">
                        <div className="divide-y divide-white/5">
-                        {activeUsage.map((item: any) => (
+                        {activeUsage.length === 0 ? (
+                          <div className="p-20 text-center text-zinc-700 font-bold uppercase tracking-widest text-[10px]">Usage statistics offline.</div>
+                        ) : activeUsage.map((item: any) => (
                           <div key={item.id} className="p-6 flex items-center justify-between hover:bg-white/5 transition-colors">
                             <div className="flex items-center gap-4">
                               <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center">
@@ -311,7 +294,7 @@ export default function AdvancedDashboard() {
                             </div>
                             <div className="text-right">
                               <p className="text-xs font-black text-white">{Math.floor(item.durationSeconds / 60)}m active</p>
-                              <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Daily Usage</p>
+                              <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Daily Window</p>
                             </div>
                           </div>
                         ))}
@@ -321,8 +304,8 @@ export default function AdvancedDashboard() {
                 </Card>
               </>
             ) : (
-              <div className="h-[600px] flex items-center justify-center bg-zinc-900/20 border border-white/5 rounded-[3.5rem] text-zinc-600 font-bold uppercase tracking-widest italic">
-                Select a target device to initiate telemetry handshake.
+              <div className="h-[600px] flex items-center justify-center bg-zinc-900/20 border border-white/5 rounded-[3.5rem] text-zinc-600 font-bold uppercase tracking-widest italic text-center">
+                Select a target node from the fleet<br/>to initiate telemetry handshake.
               </div>
             )}
           </div>

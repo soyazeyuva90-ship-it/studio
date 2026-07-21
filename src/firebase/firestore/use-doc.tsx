@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { DocumentReference, onSnapshot, DocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { errorEmitter } from '../error-emitter';
 import { FirestorePermissionError } from '../errors';
-import { isFirebaseConfigValid } from '../config';
 
 export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
   const [data, setData] = useState<T | null>(null);
@@ -12,7 +11,7 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!ref || !isFirebaseConfigValid() || Object.keys(ref).length === 0) {
+    if (!ref) {
       setLoading(false);
       return;
     }
@@ -23,7 +22,7 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
         setData(snapshot.exists() ? ({ ...snapshot.data(), id: snapshot.id } as unknown as T) : null);
         setLoading(false);
       },
-      async (err) => {
+      (err) => {
         const permissionError = new FirestorePermissionError({
           path: ref.path,
           operation: 'get',

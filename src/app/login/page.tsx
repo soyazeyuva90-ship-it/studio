@@ -9,10 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Shield, Loader2, Smartphone, AlertCircle, Terminal, Info } from "lucide-react";
+import { Shield, Loader2, Smartphone, AlertCircle, Terminal } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { isFirebaseConfigValid } from "@/firebase/config";
 
 function LoginFormContent() {
   const router = useRouter();
@@ -28,7 +27,6 @@ function LoginFormContent() {
   const [error, setError] = useState<string | null>(null);
   
   const isAgentSetup = roleContext === "child";
-  const isSimulationMode = !isFirebaseConfigValid();
 
   useEffect(() => {
     if (user && !loading) {
@@ -41,31 +39,8 @@ function LoginFormContent() {
     e.preventDefault();
     setError(null);
 
-    // If in simulation mode, bypass real Firebase auth for UI prototyping
-    if (isSimulationMode) {
-      setLoading(true);
-      setTimeout(() => {
-        const mockUser = {
-          uid: 'sim_' + Math.random().toString(36).substr(2, 9),
-          email: email || 'demo@safeguard.net',
-          displayName: email ? email.split('@')[0] : 'Demo User',
-          emailVerified: true
-        };
-        localStorage.setItem('safeguard_mock_user', JSON.stringify(mockUser));
-
-        toast({ 
-          title: "Simulation Active", 
-          description: "Proceeding with mock authentication session." 
-        });
-        if (isAgentSetup) router.push("/device");
-        else router.push("/dashboard");
-        setLoading(false);
-      }, 1000);
-      return;
-    }
-
     if (!auth || !auth.app) {
-      setError("Firebase not initialized correctly.");
+      setError("Firebase not initialized correctly. Please check environment variables.");
       return;
     }
 
@@ -95,8 +70,9 @@ function LoginFormContent() {
     } catch (err: any) {
       console.error("Auth Failure:", err);
       let message = err.message;
-      if (err.code === 'auth/invalid-api-key') message = "Invalid API Key in configuration.";
-      if (err.code === 'auth/user-not-found') message = "Device account not found.";
+      if (err.code === 'auth/invalid-api-key') message = "Invalid Firebase API Key.";
+      if (err.code === 'auth/user-not-found') message = "Account not found.";
+      if (err.code === 'auth/wrong-password') message = "Invalid credentials.";
       
       setError(message);
       toast({
@@ -132,16 +108,6 @@ function LoginFormContent() {
 
         <CardContent className="pb-10">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {isSimulationMode && (
-              <Alert className="bg-blue-500/5 border-blue-500/20 text-blue-400 rounded-2xl">
-                <Info className="h-4 w-4" />
-                <AlertTitle className="font-black uppercase text-[10px] tracking-widest">Prototype Mode</AlertTitle>
-                <AlertDescription className="text-xs">
-                  Running in simulation mode. Real Firebase keys not detected.
-                </AlertDescription>
-              </Alert>
-            )}
-
             {error && (
               <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive rounded-2xl">
                 <AlertCircle className="h-4 w-4" />
@@ -186,7 +152,7 @@ function LoginFormContent() {
             <div className="pt-4 flex flex-col items-center gap-4">
               <div className="flex items-center gap-2 text-zinc-700">
                 <Terminal className="w-3 h-3" />
-                <span className="text-[8px] font-black uppercase tracking-[0.3em]">Status: {isSimulationMode ? 'Simulation Handshake' : 'Live Ready'}</span>
+                <span className="text-[8px] font-black uppercase tracking-[0.3em]">Status: Ready for Sync</span>
               </div>
             </div>
           </form>

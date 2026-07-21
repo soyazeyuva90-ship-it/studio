@@ -3,11 +3,9 @@
 import { useState, useEffect } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { useAuth } from '../provider';
-import { isFirebaseConfigValid } from '../config';
 
 /**
- * @fileOverview Hook to track the current user.
- * Handles simulation mode by checking localStorage for a mock session.
+ * @fileOverview Hook to track the current user using real Firebase Auth.
  */
 export function useUser() {
   const auth = useAuth();
@@ -15,24 +13,10 @@ export function useUser() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Handle Simulation Mode
-    if (!isFirebaseConfigValid()) {
-      const stored = typeof window !== 'undefined' ? localStorage.getItem('safeguard_mock_user') : null;
-      if (stored) {
-        try {
-          setUser(JSON.parse(stored) as User);
-        } catch (e) {
-          setUser(null);
-        }
-      } else {
-        setUser(null);
-      }
+    if (!auth || !auth.app) {
       setLoading(false);
       return;
     }
-
-    // Handle Real Firebase Auth
-    if (!auth || Object.keys(auth).length === 0) return;
     
     return onAuthStateChanged(auth, (user) => {
       setUser(user);

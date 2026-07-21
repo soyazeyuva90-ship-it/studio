@@ -1,6 +1,5 @@
-
 /**
- * @fileOverview Firebase configuration with robust environment variable detection and fallback logic.
+ * @fileOverview Firebase configuration with environment variable detection.
  */
 
 export const firebaseConfig = {
@@ -13,22 +12,9 @@ export const firebaseConfig = {
 };
 
 /**
- * Validates if the Firebase configuration is complete.
- * If invalid, the app enters "Simulation Mode" for prototyping.
+ * Validates if the Firebase configuration is present.
  * @returns boolean
  */
 export function isFirebaseConfigValid(): boolean {
-  const keys = [
-    firebaseConfig.apiKey,
-    firebaseConfig.projectId,
-    firebaseConfig.appId
-  ];
-  
-  return keys.every(key => 
-    key && 
-    key !== '' && 
-    key !== 'YOUR_API_KEY_HERE' && 
-    key !== 'YOUR_PROJECT_ID' &&
-    !key.includes('YOUR_')
-  );
+  return !!(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId);
 }
