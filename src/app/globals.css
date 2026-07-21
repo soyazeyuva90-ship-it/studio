@@ -1,34 +1,35 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 252 29% 8%;
-    --foreground: 0 0% 100%;
-    --card: 252 29% 10%;
-    --card-foreground: 0 0% 100%;
-    --popover: 252 29% 8%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 258 94% 66%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 224 94% 68%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 252 29% 15%;
-    --muted-foreground: 252 10% 70%;
-    --accent: 224 94% 68%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 252 29% 20%;
-    --input: 252 29% 20%;
-    --ring: 258 94% 66%;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 5%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 263.4 70% 50.4%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217.2 91.2% 59.8%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 263.4 70% 50.4%;
     --radius: 1rem;
-    --chart-1: 258 94% 66%;
-    --chart-2: 224 94% 68%;
-    --chart-3: 280 90% 60%;
-    --chart-4: 200 90% 60%;
-    --chart-5: 320 90% 60%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
   }
 }
 
@@ -46,31 +47,20 @@
 }
 
 .neon-border {
-  box-shadow: 0 0 15px rgba(139, 92, 246, 0.3), inset 0 0 5px rgba(139, 92, 246, 0.2);
-}
-
-.bento-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.2), inset 0 0 5px rgba(139, 92, 246, 0.1);
 }
 
 .glass-morphism {
-  background: rgba(17, 14, 27, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(139, 92, 246, 0.2);
+  background: rgba(10, 10, 10, 0.8);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-@keyframes float {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-  100% { transform: translateY(0px); }
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(1.5); opacity: 0; }
 }
 
-.animate-float {
-  animation: float 4s ease-in-out infinite;
-}
-
-.glow-text {
-  text-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+.animate-pulse-ring {
+  animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
 }

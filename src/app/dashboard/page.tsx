@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useCollection, useFirestore } from "@/firebase";
@@ -11,7 +12,8 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   MapPin, Battery, Clock, Smartphone, LogOut, 
-  ShieldCheck, Phone, MessageSquare, Bell, Play, Loader2, RefreshCw, Download, Plus, QrCode, Sparkles, AlertTriangle, CheckCircle2
+  ShieldCheck, Phone, MessageSquare, Bell, Play, Loader2, RefreshCw, Download, Plus, QrCode, Sparkles, AlertTriangle, CheckCircle2,
+  Instagram, Facebook, Ghost, MessageCircle, Signal, Activity
 } from "lucide-react";
 import { format } from "date-fns";
 import { Navbar } from "@/components/Navbar";
@@ -82,6 +84,15 @@ export default function ParentDashboard() {
     }
   }
 
+  const getSocialIcon = (appName: string) => {
+    const name = appName.toLowerCase();
+    if (name.includes('instagram')) return <Instagram className="w-4 h-4 text-pink-500" />;
+    if (name.includes('facebook')) return <Facebook className="w-4 h-4 text-blue-600" />;
+    if (name.includes('whatsapp')) return <MessageCircle className="w-4 h-4 text-green-500" />;
+    if (name.includes('snapchat')) return <Ghost className="w-4 h-4 text-yellow-500" />;
+    return <Bell className="w-4 h-4 text-muted-foreground" />;
+  };
+
   if (authLoading || devicesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -94,10 +105,10 @@ export default function ParentDashboard() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="pt-28 pb-12 px-6 lg:px-12 max-w-7xl mx-auto space-y-12 animate-fade-in-up">
+      <main className="pt-28 pb-12 px-6 lg:px-12 max-w-7xl mx-auto space-y-12">
         
         {(!devices || devices.length === 0) && (
-          <Card className="bg-primary/5 border-dashed border-primary/30 rounded-[3rem] overflow-hidden">
+          <Card className="bg-primary/5 border-dashed border-primary/30 rounded-[3rem]">
             <CardContent className="p-12 text-center space-y-8">
               <div className="w-20 h-20 bg-primary/20 rounded-3xl flex items-center justify-center mx-auto">
                 <Smartphone className="w-10 h-10 text-primary" />
@@ -105,245 +116,319 @@ export default function ParentDashboard() {
               <div className="space-y-2">
                 <h2 className="text-3xl font-black tracking-tight">Connect Your First Device</h2>
                 <p className="text-muted-foreground max-w-md mx-auto">
-                  To start monitoring, you must install the SafeGuard Agent on your child's mobile device.
+                  To start monitoring, you must install the SafeGuard Agent on your child's mobile device and login with your credentials.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row justify-center gap-4">
                 <Button className="h-14 px-8 rounded-2xl bg-primary text-lg font-bold gap-3" onClick={() => router.push("/device")}>
-                  <Download className="w-5 h-5" /> Download Agent App
+                  <Download className="w-5 h-5" /> Install Mobile Agent
                 </Button>
                 <Button variant="outline" className="h-14 px-8 rounded-2xl border-white/10 text-lg font-bold gap-3">
-                  <QrCode className="w-5 h-5" /> Generate Pair Code
+                  <QrCode className="w-5 h-5" /> View Pairing Guide
                 </Button>
               </div>
             </CardContent>
           </Card>
         )}
 
-        <section className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em]">Family Devices</h2>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => router.push("/device")}>
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
-            <div className="space-y-3">
-              {devices && devices.map(device => (
-                <button
-                  key={device.id}
-                  onClick={() => {
-                    setSelectedDeviceId(device.id);
-                    setAiReport(null);
-                  }}
-                  className={`w-full text-left p-5 rounded-3xl border transition-all duration-300 ${
-                    selectedDeviceId === device.id 
-                    ? "bg-primary/10 border-primary shadow-[0_0_30px_rgba(139,92,246,0.1)] scale-[1.02]" 
-                    : "bg-card border-white/5 hover:border-white/20"
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${selectedDeviceId === device.id ? "bg-primary text-white" : "bg-white/5 text-muted-foreground"}`}>
-                      <Smartphone className="w-6 h-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold truncate text-lg">{device.name}</p>
-                      <div className="flex items-center gap-1.5">
-                        <span className={`w-2 h-2 rounded-full ${device.isOnline ? "bg-green-500 animate-pulse" : "bg-muted-foreground"}`} />
-                        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
-                          {device.isOnline ? "Live Now" : "Offline"}
-                        </p>
+        {devices && devices.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Sidebar: Device List & Quick Stats */}
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em]">Managed Devices</h2>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => router.push("/device")}>
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {devices.map(device => (
+                  <button
+                    key={device.id}
+                    onClick={() => {
+                      setSelectedDeviceId(device.id);
+                      setAiReport(null);
+                    }}
+                    className={`w-full text-left p-5 rounded-3xl border transition-all duration-300 ${
+                      selectedDeviceId === device.id 
+                      ? "bg-primary/10 border-primary shadow-[0_0_30px_rgba(139,92,246,0.1)] scale-[1.02]" 
+                      : "bg-card border-white/5 hover:border-white/20"
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${selectedDeviceId === device.id ? "bg-primary text-white" : "bg-white/5 text-muted-foreground"}`}>
+                        <Smartphone className="w-6 h-6" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold truncate text-lg">{device.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full ${device.isOnline ? "bg-green-500 animate-pulse" : "bg-muted-foreground"}`} />
+                          <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
+                            {device.isOnline ? "Live Sync Active" : "Last seen " + format(new Date(device.lastSeen), "HH:mm")}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
+                  </button>
+                ))}
+              </div>
 
-          <div className="lg:col-span-3 space-y-8">
-            {selectedDeviceId ? (
-              <>
-                <Card className="bg-card border-white/5 shadow-2xl overflow-hidden rounded-[2.5rem]">
-                  <CardHeader className="bg-white/5 border-b border-white/5 p-8 flex flex-row items-center justify-between">
-                    <div>
-                      <CardTitle className="text-2xl font-black">Activity Hub</CardTitle>
-                      <CardDescription>Reviewing real-time logs for {currentDevice?.name}</CardDescription>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <Button 
-                        onClick={handleAiAnalysis} 
-                        disabled={aiLoading}
-                        variant="secondary" 
-                        className="bg-primary/20 text-primary hover:bg-primary/30 rounded-full font-bold"
-                      >
-                        {aiLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
-                        AI Safety Insight
-                      </Button>
-                      <RefreshCw className="w-5 h-5 text-muted-foreground hover:rotate-180 transition-all cursor-pointer" />
-                    </div>
+              {currentDevice && (
+                <Card className="bg-white/5 border-white/5 rounded-[2rem]">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-black uppercase tracking-widest text-muted-foreground">Device Health</CardTitle>
                   </CardHeader>
-                  <CardContent className="p-0">
-                    <Tabs defaultValue="calls" className="w-full">
-                      <TabsList className="w-full justify-start h-16 bg-transparent border-b border-white/5 rounded-none px-8 gap-10">
-                        <TabsTrigger value="calls" className="data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 text-xs font-black uppercase tracking-[0.2em]">Calls</TabsTrigger>
-                        <TabsTrigger value="sms" className="data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 text-xs font-black uppercase tracking-[0.2em]">SMS</TabsTrigger>
-                        <TabsTrigger value="notifications" className="data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 text-xs font-black uppercase tracking-[0.2em]">Social</TabsTrigger>
-                      </TabsList>
-                      
-                      <TabsContent value="calls" className="m-0 max-h-[600px] overflow-y-auto">
-                        <div className="divide-y divide-white/5">
-                          {calls && calls.length > 0 ? calls.map((call: any) => (
-                            <div key={call.id} className="p-8 flex items-center justify-between hover:bg-white/5 transition-colors">
-                              <div className="flex items-center gap-6">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${call.type === 'missed' ? 'bg-destructive/10 text-destructive' : 'bg-green-500/10 text-green-500'}`}>
-                                  <Phone className="w-6 h-6" />
-                                </div>
-                                <div>
-                                  <p className="font-bold text-xl">{call.contactName || call.phoneNumber}</p>
-                                  <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">{format(new Date(call.timestamp), "MMM d, HH:mm")} • {Math.floor(call.durationSeconds / 60)}m {call.durationSeconds % 60}s</p>
-                                </div>
-                              </div>
-                              {call.isRecorded && (
-                                <Button size="sm" variant="outline" className="gap-2 rounded-full border-primary/30 text-primary hover:bg-primary/10 px-6 h-10">
-                                  <Play className="w-3.5 h-3.5 fill-current" /> Listen
-                                </Button>
-                              )}
-                            </div>
-                          )) : <div className="p-32 text-center text-muted-foreground space-y-4"><Phone className="w-12 h-12 mx-auto opacity-10" /><p className="font-black uppercase tracking-widest text-[10px]">No Recorded Calls</p></div>}
+                  <CardContent className="space-y-4">
+                    <div className="flex justify-between items-end">
+                      <div className="flex items-center gap-2">
+                        <Battery className={`w-4 h-4 ${currentDevice.batteryLevel < 20 ? 'text-destructive' : 'text-green-500'}`} />
+                        <span className="font-bold">{currentDevice.batteryLevel}%</span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">Battery</span>
+                    </div>
+                    <Progress value={currentDevice.batteryLevel} className="h-1.5" />
+                    
+                    <div className="pt-4 border-t border-white/5 space-y-3">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Signal className="w-3.5 h-3.5" />
+                          <span>Network Status</span>
                         </div>
-                      </TabsContent>
-
-                      <TabsContent value="sms" className="m-0 max-h-[600px] overflow-y-auto">
-                        <div className="divide-y divide-white/5">
-                          {sms && sms.length > 0 ? sms.map((msg: any) => (
-                            <div key={msg.id} className="p-8 flex gap-6 hover:bg-white/5 transition-colors">
-                              <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
-                                <MessageSquare className="w-6 h-6" />
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex justify-between items-center mb-3">
-                                  <p className="font-bold text-blue-400 text-lg">{msg.phoneNumber}</p>
-                                  <p className="text-[10px] text-muted-foreground font-black uppercase">{format(new Date(msg.timestamp), "HH:mm")}</p>
-                                </div>
-                                <div className="bg-white/5 p-5 rounded-3xl rounded-tl-none border border-white/5">
-                                  <p className="text-sm leading-relaxed text-white/80">"{msg.messageBody}"</p>
-                                </div>
-                              </div>
-                            </div>
-                          )) : <div className="p-32 text-center text-muted-foreground space-y-4"><MessageSquare className="w-12 h-12 mx-auto opacity-10" /><p className="font-black uppercase tracking-widest text-[10px]">No Messages Found</p></div>}
+                        <span className="text-green-500 font-bold">Stable</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <MapPin className="w-3.5 h-3.5" />
+                          <span>GPS Accuracy</span>
                         </div>
-                      </TabsContent>
-
-                      <TabsContent value="notifications" className="m-0 max-h-[600px] overflow-y-auto">
-                        <div className="divide-y divide-white/5">
-                          {notifs && notifs.length > 0 ? notifs.map((notif: any) => (
-                            <div key={notif.id} className="p-8 flex gap-6 hover:bg-white/5 transition-colors">
-                              <div className="w-12 h-12 rounded-full bg-accent/10 text-accent flex items-center justify-center shrink-0">
-                                <Bell className="w-6 h-6" />
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center justify-between mb-3">
-                                  <Badge variant="secondary" className="bg-accent/20 text-accent border-accent/20 px-4 py-1.5 font-black text-[9px] uppercase tracking-[0.2em]">{notif.appName}</Badge>
-                                  <p className="text-[10px] text-muted-foreground font-black uppercase">{format(new Date(notif.timestamp), "HH:mm")}</p>
-                                </div>
-                                <p className="text-lg font-bold mb-1 text-white">{notif.title}</p>
-                                <p className="text-sm text-muted-foreground leading-relaxed italic">"{notif.content}"</p>
-                              </div>
-                            </div>
-                          )) : <div className="p-32 text-center text-muted-foreground space-y-4"><Bell className="w-12 h-12 mx-auto opacity-10" /><p className="font-black uppercase tracking-widest text-[10px]">No Intercepted Apps</p></div>}
-                        </div>
-                      </TabsContent>
-                    </Tabs>
+                        <span className="font-bold">± 5m</span>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
+              )}
+            </div>
 
-                {aiReport && (
-                  <Card className="bg-primary/5 border-primary/20 rounded-[2.5rem] overflow-hidden animate-fade-in-up">
-                    <CardHeader className="p-8 border-b border-primary/10 flex flex-row items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Sparkles className="w-6 h-6 text-primary" />
-                        <CardTitle className="text-xl font-black">Safety Insight Report</CardTitle>
+            {/* Main Cockpit */}
+            <div className="lg:col-span-3 space-y-8">
+              {selectedDeviceId ? (
+                <>
+                  <Card className="bg-card border-white/5 shadow-2xl rounded-[2.5rem] overflow-hidden">
+                    <CardHeader className="bg-white/5 border-b border-white/5 p-8 flex flex-row items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-3 mb-1">
+                          <Activity className="w-5 h-5 text-primary" />
+                          <CardTitle className="text-2xl font-black tracking-tight">Activity Cockpit</CardTitle>
+                        </div>
+                        <CardDescription>Real-time monitoring for {currentDevice?.name}</CardDescription>
                       </div>
-                      <Badge className="bg-primary text-white text-lg px-4 py-1">Safety Score: {aiReport.safetyScore}/100</Badge>
+                      <div className="flex items-center gap-4">
+                        <Button 
+                          onClick={handleAiAnalysis} 
+                          disabled={aiLoading}
+                          className="bg-primary/20 text-primary hover:bg-primary/30 rounded-full font-bold h-11 px-6 gap-2"
+                        >
+                          {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                          AI Safety Report
+                        </Button>
+                        <Button variant="ghost" size="icon" className="rounded-full hover:bg-white/5">
+                          <RefreshCw className="w-5 h-5 text-muted-foreground" />
+                        </Button>
+                      </div>
                     </CardHeader>
-                    <CardContent className="p-8 space-y-8">
-                      <div className="space-y-2">
-                        <p className="text-xs font-black text-primary uppercase tracking-[0.2em]">Summary</p>
-                        <p className="text-muted-foreground leading-relaxed italic">"{aiReport.summary}"</p>
-                      </div>
+                    <CardContent className="p-0">
+                      <Tabs defaultValue="calls" className="w-full">
+                        <TabsList className="w-full justify-start h-16 bg-transparent border-b border-white/5 rounded-none px-8 gap-10">
+                          <TabsTrigger value="calls" className="data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 text-xs font-black uppercase tracking-[0.2em] h-16">Calls</TabsTrigger>
+                          <TabsTrigger value="sms" className="data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 text-xs font-black uppercase tracking-[0.2em] h-16">SMS</TabsTrigger>
+                          <TabsTrigger value="social" className="data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 text-xs font-black uppercase tracking-[0.2em] h-16">Social Apps</TabsTrigger>
+                        </TabsList>
+                        
+                        <TabsContent value="calls" className="m-0 max-h-[600px] overflow-y-auto">
+                          <div className="divide-y divide-white/5">
+                            {calls && calls.length > 0 ? calls.map((call: any) => (
+                              <div key={call.id} className="p-8 flex items-center justify-between hover:bg-white/5 transition-colors">
+                                <div className="flex items-center gap-6">
+                                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${call.type === 'missed' ? 'bg-destructive/10 text-destructive' : 'bg-green-500/10 text-green-500'}`}>
+                                    <Phone className="w-6 h-6" />
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-xl">{call.contactName || call.phoneNumber}</p>
+                                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">
+                                      {format(new Date(call.timestamp), "MMM d, HH:mm")} • {Math.floor(call.durationSeconds / 60)}m {call.durationSeconds % 60}s
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  {call.isRecorded && (
+                                    <Button variant="outline" size="sm" className="rounded-full border-primary/20 bg-primary/5 text-primary gap-2 hover:bg-primary/10">
+                                      <Play className="w-3 h-3 fill-current" /> Play Vault Recording
+                                    </Button>
+                                  )}
+                                  <Badge variant="secondary" className="bg-white/5 border-white/5 text-[9px] uppercase tracking-widest">{call.type}</Badge>
+                                </div>
+                              </div>
+                            )) : (
+                              <div className="py-24 text-center space-y-4">
+                                <Phone className="w-12 h-12 mx-auto text-muted-foreground/20" />
+                                <p className="text-xs font-black uppercase text-muted-foreground/40 tracking-[0.2em]">No Call Activity Logged</p>
+                              </div>
+                            )}
+                          </div>
+                        </TabsContent>
 
-                      <div className="grid md:grid-cols-2 gap-8">
-                        <div className="space-y-4">
-                          <p className="text-xs font-black text-destructive uppercase tracking-[0.2em] flex items-center gap-2">
-                            <AlertTriangle className="w-3 h-3" /> Potential Concerns
-                          </p>
-                          <ul className="space-y-2">
-                            {aiReport.concerns.map((c, i) => (
-                              <li key={i} className="text-sm flex items-start gap-3 bg-destructive/5 p-3 rounded-xl border border-destructive/10">
-                                <span className="text-destructive font-bold">•</span>
-                                <span>{c}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div className="space-y-4">
-                          <p className="text-xs font-black text-green-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                            <CheckCircle2 className="w-3 h-3" /> Recommendations
-                          </p>
-                          <ul className="space-y-2">
-                            {aiReport.recommendations.map((r, i) => (
-                              <li key={i} className="text-sm flex items-start gap-3 bg-green-500/5 p-3 rounded-xl border border-green-500/10">
-                                <span className="text-green-500 font-bold">•</span>
-                                <span>{r}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
+                        <TabsContent value="sms" className="m-0 max-h-[600px] overflow-y-auto">
+                          <div className="divide-y divide-white/5">
+                            {sms && sms.length > 0 ? sms.map((msg: any) => (
+                              <div key={msg.id} className="p-8 flex gap-6 hover:bg-white/5 transition-colors">
+                                <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+                                  <MessageSquare className="w-6 h-6" />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex justify-between items-center mb-3">
+                                    <p className="font-bold text-blue-400 text-lg">{msg.phoneNumber}</p>
+                                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{format(new Date(msg.timestamp), "HH:mm")}</p>
+                                  </div>
+                                  <div className="bg-white/5 p-5 rounded-3xl rounded-tl-none border border-white/5">
+                                    <p className="text-sm leading-relaxed text-white/80">"{msg.messageBody}"</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )) : (
+                                <div className="py-24 text-center space-y-4">
+                                  <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground/20" />
+                                  <p className="text-xs font-black uppercase text-muted-foreground/40 tracking-[0.2em]">No SMS Activity Logged</p>
+                                </div>
+                            )}
+                          </div>
+                        </TabsContent>
+
+                        <TabsContent value="social" className="m-0 max-h-[600px] overflow-y-auto">
+                          <div className="divide-y divide-white/5">
+                            {notifs && notifs.length > 0 ? notifs.map((notif: any) => (
+                              <div key={notif.id} className="p-8 flex gap-6 hover:bg-white/5 transition-colors">
+                                <div className="w-12 h-12 rounded-full bg-accent/10 text-accent flex items-center justify-center shrink-0">
+                                  {getSocialIcon(notif.appName)}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <Badge variant="secondary" className="bg-accent/20 text-accent border-accent/20 px-4 py-1 font-black text-[9px] uppercase tracking-[0.2em]">
+                                      {notif.appName}
+                                    </Badge>
+                                    <p className="text-[10px] text-muted-foreground font-black uppercase">{format(new Date(notif.timestamp), "HH:mm")}</p>
+                                  </div>
+                                  <p className="text-lg font-bold mb-1 text-white">{notif.title}</p>
+                                  <div className="bg-white/5 p-4 rounded-2xl border border-white/5 italic">
+                                    <p className="text-sm text-muted-foreground leading-relaxed">"{notif.content}"</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )) : (
+                                <div className="py-24 text-center space-y-4">
+                                  <Bell className="w-12 h-12 mx-auto text-muted-foreground/20" />
+                                  <p className="text-xs font-black uppercase text-muted-foreground/40 tracking-[0.2em]">No Social App Notifications</p>
+                                </div>
+                            )}
+                          </div>
+                        </TabsContent>
+                      </Tabs>
                     </CardContent>
                   </Card>
-                )}
 
-                {currentDevice && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <Card className="bg-card border-white/5 rounded-[2.5rem] shadow-xl">
-                      <CardContent className="p-8 flex items-center gap-6">
-                        <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center text-primary">
-                          <Battery className="w-8 h-8" />
+                  {aiReport && (
+                    <Card className="bg-primary/5 border-primary/20 rounded-[2.5rem] overflow-hidden animate-fade-in-up">
+                      <CardHeader className="p-8 border-b border-primary/10 flex flex-row items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Sparkles className="w-6 h-6 text-primary" />
+                          <CardTitle className="text-xl font-black">AI Safety Insight Report</CardTitle>
                         </div>
-                        <div className="flex-1">
-                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Battery Status</p>
-                          <div className="flex items-center gap-4">
-                            <span className="text-4xl font-black">{currentDevice.batteryLevel}%</span>
-                            <Progress value={currentDevice.batteryLevel} className={`flex-1 h-3 ${currentDevice.batteryLevel < 20 ? 'bg-destructive/20' : 'bg-primary/20'}`} />
+                        <div className="flex items-center gap-4">
+                            <span className="text-[10px] font-black uppercase text-primary tracking-widest">Global Safety Score</span>
+                            <Badge className="bg-primary text-white text-lg px-5 py-1.5 rounded-full">{aiReport.safetyScore}/100</Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-8 space-y-8">
+                        <div className="space-y-2">
+                          <p className="text-xs font-black text-primary uppercase tracking-[0.2em]">Summary</p>
+                          <p className="text-lg text-white/90 leading-relaxed font-medium">"{aiReport.summary}"</p>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-8">
+                          <div className="space-y-4">
+                            <p className="text-xs font-black text-destructive uppercase tracking-[0.2em] flex items-center gap-2">
+                              <AlertTriangle className="w-3 h-3" /> Potential Concerns
+                            </p>
+                            <ul className="space-y-3">
+                              {aiReport.concerns.map((c, i) => (
+                                <li key={i} className="text-sm flex items-start gap-3 bg-destructive/5 p-4 rounded-2xl border border-destructive/10">
+                                  <span className="w-2 h-2 rounded-full bg-destructive mt-1.5 shrink-0" />
+                                  <span className="text-white/80">{c}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div className="space-y-4">
+                            <p className="text-xs font-black text-green-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                              <CheckCircle2 className="w-3 h-3" /> Actionable Advice
+                            </p>
+                            <ul className="space-y-3">
+                              {aiReport.recommendations.map((r, i) => (
+                                <li key={i} className="text-sm flex items-start gap-3 bg-green-500/5 p-4 rounded-2xl border border-green-500/10">
+                                  <span className="w-2 h-2 rounded-full bg-green-500 mt-1.5 shrink-0" />
+                                  <span className="text-white/80">{r}</span>
+                                </li>
+                              ))}
+                            </ul>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="bg-card border-white/5 rounded-[2.5rem] shadow-xl">
-                      <CardContent className="p-8 flex items-center gap-6">
-                        <div className="w-16 h-16 rounded-3xl bg-secondary/10 flex items-center justify-center text-secondary">
-                          <MapPin className="w-8 h-8" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">GPS Location</p>
-                          <p className="text-sm font-mono font-bold bg-white/5 px-5 py-2.5 rounded-2xl text-secondary border border-white/5">
-                            {currentDevice.currentLat.toFixed(5)}, {currentDevice.currentLng.toFixed(5)}
-                          </p>
-                        </div>
-                      </CardContent>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <Card className="bg-card border-white/5 rounded-[2.5rem] shadow-xl overflow-hidden relative group">
+                        <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <CardContent className="p-10 flex items-center gap-8 relative z-10">
+                            <div className="w-20 h-20 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                                <MapPin className="w-10 h-10" />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] mb-3">Live GPS Tracking</p>
+                                <p className="text-2xl font-mono font-bold text-white tracking-tighter">
+                                    {currentDevice.currentLat.toFixed(6)}° N<br/>
+                                    {currentDevice.currentLng.toFixed(6)}° W
+                                </p>
+                                <Button variant="link" className="p-0 h-auto text-primary text-xs mt-2 uppercase font-black tracking-widest">Open Historical Map</Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-card border-white/5 rounded-[2.5rem] shadow-xl overflow-hidden relative group">
+                        <div className="absolute inset-0 bg-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <CardContent className="p-10 flex items-center gap-8 relative z-10">
+                            <div className="w-20 h-20 rounded-[2rem] bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform">
+                                <ShieldCheck className="w-10 h-10" />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] mb-3">Security Pulse</p>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                    <span className="text-lg font-bold">Encrypted Vault Active</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground">Last security handshake: 2m ago</p>
+                            </div>
+                        </CardContent>
                     </Card>
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="h-[600px] flex items-center justify-center bg-card border border-white/5 rounded-[3rem] text-muted-foreground italic">
-                Select a device from the sidebar to view detailed activity.
-              </div>
-            )}
+                </>
+              ) : (
+                <div className="h-[700px] flex items-center justify-center bg-card border border-white/5 rounded-[3.5rem] text-muted-foreground italic text-lg shadow-inner">
+                  Select a device from the fleet to initialize real-time monitoring.
+                </div>
+              )}
+            </div>
           </div>
-        </section>
+        )}
       </main>
     </div>
   );
