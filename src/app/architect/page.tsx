@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 import { Cpu, Sparkles, Send, Loader2, Palette, Layout, Lightbulb } from "lucide-react";
 import { aiDesignerAssistant, type AIDesignerAssistantOutput } from "@/ai/flows/ai-designer-assistant-flow";
 
@@ -131,5 +132,3 @@ export default function ArchitectPage() {
     </div>
   );
 }
-
-import Link from "next/link";
