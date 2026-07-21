@@ -1,17 +1,17 @@
-
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth, useFirestore } from "@/firebase";
+import { useAuth, useFirestore, useUser } from "@/firebase";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Shield, Loader2, Smartphone } from "lucide-react";
+import { Shield, Loader2, Smartphone, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 /**
  * @fileOverview Standardized Login/Signup for SafeGuard.
@@ -23,18 +23,38 @@ function LoginFormContent() {
   const searchParams = useSearchParams();
   const auth = useAuth();
   const db = useFirestore();
-  const roleContext = searchParams.get("role") || "parent";
+  const { user } = useUser();
   
+  const roleContext = searchParams.get("role") || "parent";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Only allow signup if the user is coming from the "Install Agent" path
   const isAgentSetup = roleContext === "child";
 
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && !loading) {
+      if (isAgentSetup) router.push("/device");
+      else router.push("/dashboard");
+    }
+  }, [user, loading, isAgentSetup, router]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!auth || !db) return;
+    setError(null);
+
+    if (!auth || !db) {
+      setError("Firebase not properly initialized. Check your configuration.");
+      return;
+    }
+
+    if (!email || !password) {
+      setError("Please fill in all fields.");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -56,15 +76,25 @@ function LoginFormContent() {
         toast({ title: "Agent Registered", description: "This device is now linked to your vault." });
         router.push("/device");
       } else {
-        // Parent Login only on the Web
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        // Parent Login only
+        await signInWithEmailAndPassword(auth, email, password);
+        toast({ title: "Authenticated", description: "Welcome back to the SafeGuard Hub." });
         router.push("/dashboard");
       }
-    } catch (error: any) {
+    } catch (err: any) {
+      console.error("Auth error:", err);
+      let message = "An unexpected error occurred.";
+      if (err.code === 'auth/invalid-api-key') message = "Invalid Firebase API Key. Check .env file.";
+      else if (err.code === 'auth/user-not-found') message = "Account not found. Did you register via the Agent App?";
+      else if (err.code === 'auth/wrong-password') message = "Incorrect password.";
+      else if (err.code === 'auth/email-already-in-use') message = "This email is already registered.";
+      else message = err.message;
+      
+      setError(message);
       toast({
         variant: "destructive",
         title: "Auth Error",
-        description: error.message
+        description: message
       });
     } finally {
       setLoading(false);
@@ -89,6 +119,14 @@ function LoginFormContent() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Authentication Failed</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email" className="text-zinc-400 text-xs font-black uppercase tracking-widest">Email Address</Label>
               <Input 
@@ -98,7 +136,7 @@ function LoginFormContent() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-black/50 border-white/5 focus:border-primary h-12 rounded-xl"
+                className="bg-black/50 border-white/5 focus:border-primary h-12 rounded-xl text-white"
               />
             </div>
             <div className="space-y-2">
@@ -109,7 +147,7 @@ function LoginFormContent() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="bg-black/50 border-white/5 focus:border-primary h-12 rounded-xl"
+                className="bg-black/50 border-white/5 focus:border-primary h-12 rounded-xl text-white"
               />
             </div>
             
