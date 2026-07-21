@@ -26,14 +26,14 @@ function LoginFormContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [setupError, setSetupError] = useState<string | null>(null);
   
   const isAgentSetup = roleContext === "child";
   const configValid = isFirebaseConfigValid();
 
   useEffect(() => {
     if (!configValid) {
-      setError("Configuration Error: Firebase API Key is missing. Please set NEXT_PUBLIC_FIREBASE_API_KEY in your .env file.");
+      setSetupError("Configuration Missing: Please add your NEXT_PUBLIC_FIREBASE_API_KEY to the .env file to enable authentication.");
     }
   }, [configValid]);
 
@@ -46,15 +46,15 @@ function LoginFormContent() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
+    setSetupError(null);
 
     if (!configValid) {
-      setError("Cannot authenticate: System not configured.");
+      setSetupError("System not configured. Check environment variables.");
       return;
     }
 
     if (!auth || !auth.app) {
-      setError("System Initializing: Please try again in a moment.");
+      setSetupError("Firebase connection failed. Refresh the page.");
       return;
     }
 
@@ -86,18 +86,18 @@ function LoginFormContent() {
       let message = "System Access Denied.";
       
       if (err.code === 'auth/invalid-api-key') {
-        message = "Invalid API Key. Please verify your environment configuration.";
+        message = "Invalid Firebase API Key. Verify your .env configuration.";
       } else if (err.code === 'auth/user-not-found') {
-        message = "No account found. Please register via the child agent first.";
+        message = "No account found. Sign up via the child agent first.";
       } else if (err.code === 'auth/wrong-password') {
-        message = "Invalid credentials.";
+        message = "Invalid vault key.";
       } else if (err.code === 'auth/email-already-in-use') {
-        message = "Account already exists.";
+        message = "Account already registered.";
       } else {
         message = err.message;
       }
       
-      setError(message);
+      setSetupError(message);
       toast({
         variant: "destructive",
         title: "Security Violation",
@@ -116,7 +116,7 @@ function LoginFormContent() {
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
         
         <CardHeader className="text-center pt-10">
-          <div className="mx-auto w-16 h-16 rounded-3xl bg-primary flex items-center justify-center mb-8 shadow-2xl shadow-primary/40 group">
+          <div className="mx-auto w-16 h-16 rounded-3xl bg-primary flex items-center justify-center mb-8 shadow-2xl shadow-primary/40">
             {isAgentSetup ? <Smartphone className="text-white w-9 h-9" /> : <Shield className="text-white w-9 h-9" />}
           </div>
           <CardTitle className="text-4xl font-black text-white tracking-tighter mb-2 uppercase italic">
@@ -131,11 +131,11 @@ function LoginFormContent() {
 
         <CardContent className="pb-10">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
+            {setupError && (
               <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive rounded-2xl">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle className="font-black uppercase text-[10px] tracking-widest">System Error</AlertTitle>
-                <AlertDescription className="text-xs font-medium opacity-90 leading-relaxed">{error}</AlertDescription>
+                <AlertTitle className="font-black uppercase text-[10px] tracking-widest">System Alert</AlertTitle>
+                <AlertDescription className="text-xs font-medium opacity-90 leading-relaxed">{setupError}</AlertDescription>
               </Alert>
             )}
 

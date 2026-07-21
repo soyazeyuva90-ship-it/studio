@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Firebase configuration with robust environment variable detection and validation.
  */
@@ -19,19 +20,20 @@ export function isFirebaseConfigValid(): boolean {
   return !!(
     firebaseConfig.apiKey &&
     firebaseConfig.projectId &&
-    firebaseConfig.appId
+    firebaseConfig.appId &&
+    firebaseConfig.apiKey !== 'YOUR_API_KEY' // Ensure placeholders aren't used
   );
 }
 
 if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
   const missingKeys = Object.entries(firebaseConfig)
-    .filter(([_, value]) => !value)
+    .filter(([_, value]) => !value || value.includes('YOUR_'))
     .map(([key]) => key);
 
   if (missingKeys.length > 0) {
     console.warn(
-      `[SafeGuard] Missing Firebase Keys: ${missingKeys.join(', ')}. ` +
-      `Check your .env file and ensure variables have the NEXT_PUBLIC_ prefix.`
+      `[SafeGuard] Missing or Invalid Firebase Keys: ${missingKeys.join(', ')}. ` +
+      `Please update your .env file with real credentials from the Firebase Console.`
     );
   }
 }

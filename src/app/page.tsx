@@ -7,6 +7,12 @@ import { Shield, MapPin, Lock, ArrowRight, Download, CheckCircle2, Activity, Sma
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 
+/**
+ * @fileOverview SafeGuard Landing Page.
+ * Acts as the primary funnel, directing users to the Mobile Agent (Child) 
+ * or the Command Hub (Parent).
+ */
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background selection:bg-primary/30">
@@ -45,7 +51,7 @@ export default function LandingPage() {
           </div>
           
           <p className="mt-8 text-xs text-muted-foreground animate-fade-in-up delay-300">
-            Signups are disabled on the web. You must register an account through the Mobile Agent app.
+            Account registration is performed exclusively via the Mobile Agent interface.
           </p>
         </section>
 
