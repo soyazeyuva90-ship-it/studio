@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Query, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { errorEmitter } from '../error-emitter';
 import { FirestorePermissionError } from '../errors';
+import { isFirebaseConfigValid } from '../config';
 
 export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [data, setData] = useState<T[] | null>(null);
@@ -11,8 +12,13 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!query) {
+    // Guard against simulation mode or invalid queries
+    if (!query || !isFirebaseConfigValid() || Object.keys(query).length === 0) {
       setLoading(false);
+      // In simulation mode, we return empty data or could potentially return mock data
+      if (!isFirebaseConfigValid()) {
+        setData([]);
+      }
       return;
     }
 

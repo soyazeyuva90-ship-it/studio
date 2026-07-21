@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, Suspense, useEffect } from "react";
@@ -46,6 +45,14 @@ function LoginFormContent() {
     if (isSimulationMode) {
       setLoading(true);
       setTimeout(() => {
+        const mockUser = {
+          uid: 'sim_' + Math.random().toString(36).substr(2, 9),
+          email: email || 'demo@safeguard.net',
+          displayName: email ? email.split('@')[0] : 'Demo User',
+          emailVerified: true
+        };
+        localStorage.setItem('safeguard_mock_user', JSON.stringify(mockUser));
+
         toast({ 
           title: "Simulation Active", 
           description: "Proceeding with mock authentication session." 
@@ -130,7 +137,7 @@ function LoginFormContent() {
                 <Info className="h-4 w-4" />
                 <AlertTitle className="font-black uppercase text-[10px] tracking-widest">Prototype Mode</AlertTitle>
                 <AlertDescription className="text-xs">
-                  Running in simulation mode. Real Firebase keys not detected in .env.
+                  Running in simulation mode. Real Firebase keys not detected.
                 </AlertDescription>
               </Alert>
             )}

@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -14,10 +13,18 @@ export function Navbar() {
   const router = useRouter();
 
   async function handleLogout() {
-    if (auth) {
-      await signOut(auth);
-      router.push("/");
+    // Clear simulation session
+    localStorage.removeItem('safeguard_mock_user');
+    
+    // Clear real session if active
+    if (auth && Object.keys(auth).length > 0) {
+      try {
+        await signOut(auth);
+      } catch (e) {
+        console.error("Signout error:", e);
+      }
     }
+    router.push("/");
   }
 
   return (

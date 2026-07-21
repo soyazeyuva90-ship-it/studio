@@ -1,9 +1,8 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Shield, MapPin, Lock, ArrowRight, Download, CheckCircle2, Activity, SmartphoneNfc } from "lucide-react";
+import { Shield, MapPin, Lock, ArrowRight, Download, CheckCircle2, Activity } from "lucide-react";
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 
@@ -11,7 +10,6 @@ import { Navbar } from "@/components/Navbar";
  * @fileOverview SafeGuard Landing Page.
  * Acts as the primary funnel for the monitoring service.
  */
-
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background selection:bg-primary/30">

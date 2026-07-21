@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { DocumentReference, onSnapshot, DocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { errorEmitter } from '../error-emitter';
 import { FirestorePermissionError } from '../errors';
+import { isFirebaseConfigValid } from '../config';
 
 export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
   const [data, setData] = useState<T | null>(null);
@@ -11,7 +12,7 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!ref) {
+    if (!ref || !isFirebaseConfigValid() || Object.keys(ref).length === 0) {
       setLoading(false);
       return;
     }
