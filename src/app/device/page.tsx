@@ -3,19 +3,14 @@
 
 import { useState, useEffect } from "react";
 import { useUser, useFirestore } from "@/firebase";
-import { doc, setDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { doc, setDoc, collection, addDoc } from "firebase/firestore";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Smartphone, Radio, Battery, MapPin, ShieldCheck, Loader2, Phone, MessageSquare, Bell, Mic, Wifi, Signal, Power, MessageCircle, Instagram, Ghost, Lock } from "lucide-react";
+import { Smartphone, Radio, Battery, ShieldCheck, Loader2, Phone, MessageSquare, Wifi, Signal, Power, MessageCircle, Instagram, Ghost, Mic } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-
-/**
- * @fileOverview SafeGuard Mobile Agent Simulator.
- * This acts as the "APK" interface for testing. 
- * Handles real-time telemetry heartbeats and log generation.
- */
+import { isFirebaseConfigValid } from "@/firebase/config";
 
 export default function DeviceAgent() {
   const { user, loading: authLoading } = useUser();
@@ -28,17 +23,17 @@ export default function DeviceAgent() {
   const [lat, setLat] = useState(40.7128);
   const [lng, setLng] = useState(-74.0060);
 
-  // Requirement: Signups/Registration must happen here
+  const isSimulation = !isFirebaseConfigValid();
+
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/login?role=child");
     }
   }, [user, authLoading, router]);
 
-  // Real-time Telemetry Service Simulation (Heartbeat)
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isReporting && db && user) {
+    if (isReporting && user) {
       interval = setInterval(async () => {
         const newLat = lat + (Math.random() - 0.5) * 0.0005;
         const newLng = lng + (Math.random() - 0.5) * 0.0005;
@@ -48,62 +43,70 @@ export default function DeviceAgent() {
         setLng(newLng);
         setBattery(newBattery);
 
-        const deviceId = `device_${user.uid}`;
-        const deviceRef = doc(db, "devices", deviceId);
-        
-        try {
-          await setDoc(deviceRef, {
-            id: deviceId,
-            userId: user.uid,
-            name: `${user.displayName || 'Managed User'}'s Device`,
-            batteryLevel: Math.floor(newBattery),
-            lastSeen: new Date().toISOString(),
-            isOnline: true,
-            currentLat: newLat,
-            currentLng: newLng,
-            model: "Simulator v2.9",
-            osVersion: "Android 14"
-          }, { merge: true });
-        } catch (e) {
-          console.error("Sync error:", e);
+        if (!isSimulation && db) {
+          const deviceId = `device_${user.uid}`;
+          const deviceRef = doc(db, "devices", deviceId);
+          try {
+            await setDoc(deviceRef, {
+              id: deviceId,
+              userId: user.uid,
+              name: `${user.displayName || 'Managed User'}'s Device`,
+              batteryLevel: Math.floor(newBattery),
+              lastSeen: new Date().toISOString(),
+              isOnline: true,
+              currentLat: newLat,
+              currentLng: newLng,
+              model: "Simulator v2.9",
+              osVersion: "Android 14"
+            }, { merge: true });
+          } catch (e) {
+            console.error("Sync error:", e);
+          }
         }
       }, 5000);
     }
     return () => clearInterval(interval);
-  }, [isReporting, db, user, lat, lng, battery]);
+  }, [isReporting, db, user, lat, lng, battery, isSimulation]);
 
   async function simulateCall() {
-    if (!db || !user) return;
     setIsCalling(true);
-    const deviceId = `device_${user.uid}`;
-    
     toast({ title: "Call Intercepted", description: "Recording initiated in background." });
 
     setTimeout(async () => {
-      await addDoc(collection(db, "devices", deviceId, "calls"), {
-        phoneNumber: "+1 (917) " + Math.floor(1000000 + Math.random() * 9000000),
-        contactName: "Unknown Participant",
-        type: "INCOMING",
-        duration: 45,
-        timestamp: new Date().toISOString(),
-        isRecorded: true
-      });
+      if (!isSimulation && db && user) {
+        const deviceId = `device_${user.uid}`;
+        try {
+          await addDoc(collection(db, "devices", deviceId, "calls"), {
+            phoneNumber: "+1 (917) " + Math.floor(1000000 + Math.random() * 9000000),
+            contactName: "Unknown Participant",
+            type: "INCOMING",
+            duration: 45,
+            timestamp: new Date().toISOString(),
+            isRecorded: true
+          });
+        } catch (e) {
+          console.error("Log error:", e);
+        }
+      }
       setIsCalling(false);
       toast({ title: "Log Synced", description: "Encrypted call log uploaded." });
     }, 4000);
   }
 
   async function simulateSocial(platform: string) {
-    if (!db || !user) return;
-    const deviceId = `device_${user.uid}`;
-    
-    await addDoc(collection(db, "devices", deviceId, "sms"), {
-      address: platform,
-      body: `[Intercepted Notification] New activity detected on ${platform} feed.`,
-      type: "RECEIVED",
-      timestamp: new Date().toISOString()
-    });
-    
+    if (!isSimulation && db && user) {
+      const deviceId = `device_${user.uid}`;
+      try {
+        await addDoc(collection(db, "devices", deviceId, "sms"), {
+          address: platform,
+          body: `[Intercepted Notification] New activity detected on ${platform} feed.`,
+          type: "RECEIVED",
+          timestamp: new Date().toISOString()
+        });
+      } catch (e) {
+        console.error("Sync error:", e);
+      }
+    }
     toast({ title: "Syncing Notification", description: `${platform} metadata updated.` });
   }
 
@@ -112,8 +115,6 @@ export default function DeviceAgent() {
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 font-body">
       <div className="w-full max-w-sm space-y-10">
-        
-        {/* Native UI Header */}
         <header className="flex justify-between items-center text-white/40 px-4">
           <div className="flex items-center gap-2 font-black text-[9px] uppercase tracking-[0.2em]">
             <ShieldCheck className="w-4 h-4 text-primary" /> 
@@ -128,7 +129,6 @@ export default function DeviceAgent() {
           </div>
         </header>
 
-        {/* Device Viewport */}
         <div className="flex justify-center">
           <div className="relative">
             <div className={`w-44 h-80 border-[8px] transition-all duration-700 ${isCalling ? 'border-primary shadow-[0_0_80px_rgba(139,92,246,0.2)]' : 'border-zinc-800'} rounded-[3.5rem] p-6 bg-zinc-950 flex flex-col items-center justify-center gap-6 relative overflow-hidden`}>
@@ -154,7 +154,6 @@ export default function DeviceAgent() {
           </div>
         </div>
 
-        {/* Control Interface */}
         <Card className="bg-zinc-900/50 border-white/5 shadow-3xl rounded-[2.5rem] overflow-hidden backdrop-blur-md">
           <CardContent className="p-8 space-y-6 text-center">
             <div className="space-y-1 mb-6">

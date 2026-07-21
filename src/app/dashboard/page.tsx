@@ -4,20 +4,18 @@
 import { useUser, useCollection, useFirestore } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { collection, query, where, orderBy, limit, doc, addDoc, serverTimestamp } from "firebase/firestore";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { collection, query, where, orderBy, limit, addDoc } from "firebase/firestore";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Smartphone, ShieldCheck, Phone, MessageSquare, Bell, Play, Loader2, RefreshCw, 
-  Map as MapIcon, Activity, AlertTriangle, CheckCircle2, Cpu, Signal, Battery, Clock,
-  Lock, Mic, Zap, BarChart3
+  Smartphone, Phone, MessageSquare, Play, Loader2, RefreshCw, 
+  Map as MapIcon, Activity, Cpu, Signal, Zap, Lock, Mic
 } from "lucide-react";
 import { format } from "date-fns";
 import { Navbar } from "@/components/Navbar";
-import { generateSafetyReport, type SafetyReportOutput } from "@/ai/flows/safety-report-flow";
+import { isFirebaseConfigValid } from "@/firebase/config";
 import { toast } from "@/hooks/use-toast";
 
 export default function AdvancedDashboard() {
@@ -25,44 +23,73 @@ export default function AdvancedDashboard() {
   const db = useFirestore();
   const router = useRouter();
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiReport, setAiReport] = useState<SafetyReportOutput | null>(null);
+  
+  const isSimulation = !isFirebaseConfigValid();
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login");
   }, [user, authLoading, router]);
 
   const devicesQuery = useMemo(() => {
-    if (!db || !user) return null;
-    return query(collection(db, "devices"), where("userId", "==", user.uid));
-  }, [db, user]);
+    if (!db || !user || isSimulation) return null;
+    try {
+      return query(collection(db, "devices"), where("userId", "==", user.uid));
+    } catch (e) {
+      return null;
+    }
+  }, [db, user, isSimulation]);
 
   const { data: devices, loading: devicesLoading } = useCollection(devicesQuery);
 
+  // Mock data for simulation mode
+  const mockDevices = useMemo(() => [
+    { id: "mock-1", name: "John's iPhone 15", batteryLevel: 84, isOnline: true, model: "iPhone 15 Pro", osVersion: "iOS 17.4" },
+    { id: "mock-2", name: "Sarah's Galaxy S24", batteryLevel: 12, isOnline: false, model: "SM-G991B", osVersion: "Android 14" }
+  ], []);
+
+  const activeDevices = isSimulation ? mockDevices : (devices || []);
+
   useEffect(() => {
-    if (devices && devices.length > 0 && !selectedDeviceId) {
-      setSelectedDeviceId(devices[0].id);
+    if (activeDevices.length > 0 && !selectedDeviceId) {
+      setSelectedDeviceId(activeDevices[0].id);
     }
-  }, [devices, selectedDeviceId]);
+  }, [activeDevices, selectedDeviceId]);
 
   const currentDevice = useMemo(() => {
-    return devices?.find(d => d.id === selectedDeviceId);
-  }, [devices, selectedDeviceId]);
+    return activeDevices.find(d => d.id === selectedDeviceId);
+  }, [activeDevices, selectedDeviceId]);
 
   const telemetryQueries = useMemo(() => {
-    if (!db || !selectedDeviceId) return { calls: null, sms: null, usage: null };
-    return {
-      calls: query(collection(db, "devices", selectedDeviceId, "calls"), orderBy("timestamp", "desc"), limit(10)),
-      sms: query(collection(db, "devices", selectedDeviceId, "sms"), orderBy("timestamp", "desc"), limit(10)),
-      usage: query(collection(db, "devices", selectedDeviceId, "usage"), orderBy("timestamp", "desc"), limit(10))
-    };
-  }, [db, selectedDeviceId]);
+    if (!db || !selectedDeviceId || isSimulation) return { calls: null, sms: null, usage: null };
+    try {
+      return {
+        calls: query(collection(db, "devices", selectedDeviceId, "calls"), orderBy("timestamp", "desc"), limit(10)),
+        sms: query(collection(db, "devices", selectedDeviceId, "sms"), orderBy("timestamp", "desc"), limit(10)),
+        usage: query(collection(db, "devices", selectedDeviceId, "usage"), orderBy("timestamp", "desc"), limit(10))
+      };
+    } catch (e) {
+      return { calls: null, sms: null, usage: null };
+    }
+  }, [db, selectedDeviceId, isSimulation]);
 
   const { data: calls } = useCollection(telemetryQueries.calls);
   const { data: sms } = useCollection(telemetryQueries.sms);
   const { data: usage } = useCollection(telemetryQueries.usage);
 
+  // Mock Telemetry for Simulation
+  const mockCalls = [{ id: "c1", contactName: "David Miller", type: "INCOMING", duration: 124, timestamp: new Date().toISOString() }];
+  const mockSms = [{ id: "s1", address: "WhatsApp", body: "Checking in on the project status.", timestamp: new Date().toISOString() }];
+  const mockUsage = [{ id: "u1", appName: "Snapchat", packageName: "com.snapchat.android", durationSeconds: 3600 }];
+
+  const activeCalls = isSimulation ? mockCalls : (calls || []);
+  const activeSms = isSimulation ? mockSms : (sms || []);
+  const activeUsage = isSimulation ? mockUsage : (usage || []);
+
   async function sendRemoteCommand(commandType: string) {
+    if (isSimulation) {
+      toast({ title: "Simulation Command", description: `${commandType} triggered in sandbox.` });
+      return;
+    }
     if (!db || !selectedDeviceId) return;
     try {
       await addDoc(collection(db, "devices", selectedDeviceId, "commands"), {
@@ -77,7 +104,7 @@ export default function AdvancedDashboard() {
     }
   }
 
-  if (authLoading || devicesLoading) {
+  if (authLoading || (devicesLoading && !isSimulation)) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>;
   }
 
@@ -86,8 +113,6 @@ export default function AdvancedDashboard() {
       <Navbar />
       
       <main className="pt-24 pb-12 px-6 lg:px-12 max-w-[1600px] mx-auto space-y-8">
-        
-        {/* Top Stats Bar */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="bg-zinc-900/50 border-white/5 p-4 flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
@@ -95,7 +120,7 @@ export default function AdvancedDashboard() {
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Active Devices</p>
-              <p className="text-2xl font-bold text-white">{devices?.length || 0}</p>
+              <p className="text-2xl font-bold text-white">{activeDevices.length}</p>
             </div>
           </Card>
           <Card className="bg-zinc-900/50 border-white/5 p-4 flex items-center gap-4">
@@ -104,7 +129,7 @@ export default function AdvancedDashboard() {
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Global Status</p>
-              <p className="text-2xl font-bold text-white">Encrypted</p>
+              <p className="text-2xl font-bold text-white">{isSimulation ? 'Sandbox' : 'Encrypted'}</p>
             </div>
           </Card>
           <Card className="bg-zinc-900/50 border-white/5 p-4 flex items-center gap-4">
@@ -128,12 +153,10 @@ export default function AdvancedDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* Left Sidebar: Device Selection & Remote Controls */}
           <div className="lg:col-span-3 space-y-6">
             <div className="space-y-3">
               <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-2">Device Fleet</h3>
-              {devices?.map(device => (
+              {activeDevices.map(device => (
                 <button
                   key={device.id}
                   onClick={() => setSelectedDeviceId(device.id)}
@@ -149,7 +172,7 @@ export default function AdvancedDashboard() {
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <p className="font-bold text-white truncate text-sm">{device.name}</p>
-                      <p className="text-[10px] text-muted-foreground font-medium">{device.isOnline ? 'Active Now' : 'Last sync 2h ago'}</p>
+                      <p className="text-[10px] text-muted-foreground font-medium">{device.isOnline ? 'Active Now' : 'Offline'}</p>
                     </div>
                   </div>
                 </button>
@@ -177,16 +200,14 @@ export default function AdvancedDashboard() {
             )}
           </div>
 
-          {/* Center Column: Live Intelligence & Map */}
           <div className="lg:col-span-9 space-y-8">
             {currentDevice ? (
               <>
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                  {/* Status Card */}
                   <Card className="bg-zinc-900/50 border-white/5 rounded-3xl overflow-hidden xl:col-span-1">
-                    <CardHeader className="border-b border-white/5 bg-white/5">
-                      <CardTitle className="text-sm font-black uppercase tracking-widest">Device Vitals</CardTitle>
-                    </CardHeader>
+                    <div className="p-4 border-b border-white/5 bg-white/5">
+                      <h4 className="text-sm font-black uppercase tracking-widest">Device Vitals</h4>
+                    </div>
                     <CardContent className="p-6 space-y-6">
                       <div className="space-y-2">
                         <div className="flex justify-between text-xs font-bold">
@@ -201,14 +222,13 @@ export default function AdvancedDashboard() {
                           <p className="text-xs font-black text-white">4G LTE</p>
                         </div>
                         <div className="bg-white/5 p-3 rounded-2xl border border-white/5">
-                          <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Storage</p>
-                          <p className="text-xs font-black text-white">64GB Free</p>
+                          <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Status</p>
+                          <p className="text-xs font-black text-white">{currentDevice.isOnline ? 'Online' : 'Offline'}</p>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* Live Map Preview */}
                   <Card className="bg-zinc-900/50 border-white/5 rounded-3xl overflow-hidden xl:col-span-2 min-h-[250px] relative">
                     <div className="absolute inset-0 bg-[#111] opacity-50" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #333 1px, transparent 0)', backgroundSize: '24px 24px' }} />
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -218,7 +238,7 @@ export default function AdvancedDashboard() {
                         </div>
                         <div className="space-y-1">
                           <p className="text-lg font-black text-white">Live Tracking Active</p>
-                          <p className="text-xs text-muted-foreground">Last location: 40.7128° N, 74.0060° W</p>
+                          <p className="text-xs text-muted-foreground">Coordinates: 40.7128° N, 74.0060° W</p>
                         </div>
                         <Button variant="secondary" className="rounded-full font-bold text-xs h-9 px-6">Open High-Res Map</Button>
                       </div>
@@ -226,7 +246,6 @@ export default function AdvancedDashboard() {
                   </Card>
                 </div>
 
-                {/* Telemetry Tabs */}
                 <Card className="bg-zinc-900/50 border-white/5 rounded-[2.5rem] overflow-hidden">
                   <Tabs defaultValue="calls" className="w-full">
                     <TabsList className="w-full justify-start h-16 bg-white/5 border-b border-white/5 rounded-none px-8 gap-10">
@@ -237,7 +256,7 @@ export default function AdvancedDashboard() {
 
                     <TabsContent value="calls" className="m-0 p-0">
                       <div className="divide-y divide-white/5">
-                        {calls?.map((call: any) => (
+                        {activeCalls.map((call: any) => (
                           <div key={call.id} className="p-6 flex items-center justify-between hover:bg-white/5 transition-colors">
                             <div className="flex items-center gap-6">
                               <div className={`w-10 h-10 rounded-full flex items-center justify-center ${call.type === 'MISSED' ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'}`}>
@@ -260,7 +279,7 @@ export default function AdvancedDashboard() {
 
                     <TabsContent value="sms" className="m-0 p-0">
                       <div className="divide-y divide-white/5">
-                        {sms?.map((msg: any) => (
+                        {activeSms.map((msg: any) => (
                           <div key={msg.id} className="p-6 flex gap-4 hover:bg-white/5 transition-colors">
                             <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
                               <MessageSquare className="w-5 h-5" />
@@ -279,7 +298,7 @@ export default function AdvancedDashboard() {
 
                     <TabsContent value="usage" className="m-0 p-0">
                        <div className="divide-y divide-white/5">
-                        {usage?.map((item: any) => (
+                        {activeUsage.map((item: any) => (
                           <div key={item.id} className="p-6 flex items-center justify-between hover:bg-white/5 transition-colors">
                             <div className="flex items-center gap-4">
                               <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center">
