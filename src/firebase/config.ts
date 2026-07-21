@@ -1,6 +1,6 @@
 
 /**
- * @fileOverview Firebase configuration with robust environment variable detection and validation.
+ * @fileOverview Firebase configuration with robust environment variable detection and fallback logic.
  */
 
 export const firebaseConfig = {
@@ -13,27 +13,22 @@ export const firebaseConfig = {
 };
 
 /**
- * Validates if the Firebase configuration is complete enough to initialize.
+ * Validates if the Firebase configuration is complete.
+ * If invalid, the app enters "Simulation Mode" for prototyping.
  * @returns boolean
  */
 export function isFirebaseConfigValid(): boolean {
-  return !!(
-    firebaseConfig.apiKey &&
-    firebaseConfig.projectId &&
-    firebaseConfig.appId &&
-    firebaseConfig.apiKey !== 'YOUR_API_KEY' // Ensure placeholders aren't used
+  const keys = [
+    firebaseConfig.apiKey,
+    firebaseConfig.projectId,
+    firebaseConfig.appId
+  ];
+  
+  return keys.every(key => 
+    key && 
+    key !== '' && 
+    key !== 'YOUR_API_KEY_HERE' && 
+    key !== 'YOUR_PROJECT_ID' &&
+    !key.includes('YOUR_')
   );
-}
-
-if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
-  const missingKeys = Object.entries(firebaseConfig)
-    .filter(([_, value]) => !value || value.includes('YOUR_'))
-    .map(([key]) => key);
-
-  if (missingKeys.length > 0) {
-    console.warn(
-      `[SafeGuard] Missing or Invalid Firebase Keys: ${missingKeys.join(', ')}. ` +
-      `Please update your .env file with real credentials from the Firebase Console.`
-    );
-  }
 }

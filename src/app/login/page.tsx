@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Shield, Loader2, Smartphone, AlertCircle, Terminal } from "lucide-react";
+import { Shield, Loader2, Smartphone, AlertCircle, Terminal, Info } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { isFirebaseConfigValid } from "@/firebase/config";
@@ -26,16 +26,10 @@ function LoginFormContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [setupError, setSetupError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   const isAgentSetup = roleContext === "child";
-  const configValid = isFirebaseConfigValid();
-
-  useEffect(() => {
-    if (!configValid) {
-      setSetupError("Configuration Missing: Please add your NEXT_PUBLIC_FIREBASE_API_KEY to the .env file to enable authentication.");
-    }
-  }, [configValid]);
+  const isSimulationMode = !isFirebaseConfigValid();
 
   useEffect(() => {
     if (user && !loading) {
@@ -46,15 +40,25 @@ function LoginFormContent() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSetupError(null);
+    setError(null);
 
-    if (!configValid) {
-      setSetupError("System not configured. Check environment variables.");
+    // If in simulation mode, bypass real Firebase auth for UI prototyping
+    if (isSimulationMode) {
+      setLoading(true);
+      setTimeout(() => {
+        toast({ 
+          title: "Simulation Active", 
+          description: "Proceeding with mock authentication session." 
+        });
+        if (isAgentSetup) router.push("/device");
+        else router.push("/dashboard");
+        setLoading(false);
+      }, 1000);
       return;
     }
 
     if (!auth || !auth.app) {
-      setSetupError("Firebase connection failed. Refresh the page.");
+      setError("Firebase not initialized correctly.");
       return;
     }
 
@@ -83,21 +87,11 @@ function LoginFormContent() {
       }
     } catch (err: any) {
       console.error("Auth Failure:", err);
-      let message = "System Access Denied.";
+      let message = err.message;
+      if (err.code === 'auth/invalid-api-key') message = "Invalid API Key in configuration.";
+      if (err.code === 'auth/user-not-found') message = "Device account not found.";
       
-      if (err.code === 'auth/invalid-api-key') {
-        message = "Invalid Firebase API Key. Verify your .env configuration.";
-      } else if (err.code === 'auth/user-not-found') {
-        message = "No account found. Sign up via the child agent first.";
-      } else if (err.code === 'auth/wrong-password') {
-        message = "Invalid vault key.";
-      } else if (err.code === 'auth/email-already-in-use') {
-        message = "Account already registered.";
-      } else {
-        message = err.message;
-      }
-      
-      setSetupError(message);
+      setError(message);
       toast({
         variant: "destructive",
         title: "Security Violation",
@@ -131,25 +125,35 @@ function LoginFormContent() {
 
         <CardContent className="pb-10">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {setupError && (
+            {isSimulationMode && (
+              <Alert className="bg-blue-500/5 border-blue-500/20 text-blue-400 rounded-2xl">
+                <Info className="h-4 w-4" />
+                <AlertTitle className="font-black uppercase text-[10px] tracking-widest">Prototype Mode</AlertTitle>
+                <AlertDescription className="text-xs">
+                  Running in simulation mode. Real Firebase keys not detected in .env.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {error && (
               <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive rounded-2xl">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle className="font-black uppercase text-[10px] tracking-widest">System Alert</AlertTitle>
-                <AlertDescription className="text-xs font-medium opacity-90 leading-relaxed">{setupError}</AlertDescription>
+                <AlertTitle className="font-black uppercase text-[10px] tracking-widest">Security Alert</AlertTitle>
+                <AlertDescription className="text-xs font-medium opacity-90 leading-relaxed">{error}</AlertDescription>
               </Alert>
             )}
 
             <div className="space-y-3">
               <div className="space-y-1.5 px-1">
-                <Label htmlFor="email" className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em]">User Identification</Label>
+                <Label htmlFor="email" className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em]">Identification</Label>
                 <Input 
                   id="email" 
                   type="email" 
-                  placeholder="name@safeguard.net" 
+                  placeholder="admin@safeguard.net" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="bg-black/40 border-white/5 focus:border-primary/50 h-14 rounded-2xl text-white placeholder:text-zinc-700 transition-all"
+                  className="bg-black/40 border-white/5 focus:border-primary/50 h-14 rounded-2xl text-white transition-all"
                 />
               </div>
               <div className="space-y-1.5 px-1">
@@ -175,14 +179,8 @@ function LoginFormContent() {
             <div className="pt-4 flex flex-col items-center gap-4">
               <div className="flex items-center gap-2 text-zinc-700">
                 <Terminal className="w-3 h-3" />
-                <span className="text-[8px] font-black uppercase tracking-[0.3em]">Status: Ready for Handshake</span>
+                <span className="text-[8px] font-black uppercase tracking-[0.3em]">Status: {isSimulationMode ? 'Simulation Handshake' : 'Live Ready'}</span>
               </div>
-              
-              <p className="text-[9px] text-zinc-600 font-bold text-center uppercase tracking-widest px-8 leading-relaxed opacity-50">
-                {isAgentSetup 
-                  ? "Monitored telemetry will be synced to the master control hub." 
-                  : "Accounts must be created via the child agent application."}
-              </p>
             </div>
           </form>
         </CardContent>
