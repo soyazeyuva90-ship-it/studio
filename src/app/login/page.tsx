@@ -13,17 +13,24 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Shield, Loader2, Smartphone } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
+/**
+ * @fileOverview Standardized Login/Signup for SafeGuard.
+ * Signups are strictly forced through the "Agent" context (role=child).
+ */
+
 function LoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const auth = useAuth();
   const db = useFirestore();
-  const initialRole = searchParams.get("role") || "parent";
-
+  const roleContext = searchParams.get("role") || "parent";
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(initialRole === "child"); // Default to signup if child app simulation
+  
+  // Only allow signup if the user is coming from the "Install Agent" path
+  const isAgentSetup = roleContext === "child";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,14 +38,13 @@ function LoginFormContent() {
 
     setLoading(true);
     try {
-      if (isSignUp) {
-        // Signup is only allowed for the "child" role simulation
+      if (isAgentSetup) {
+        // Create account on the child's device
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const displayName = email.split("@")[0];
         
         await updateProfile(userCredential.user, { displayName });
         
-        // Save profile with child role
         await setDoc(doc(db, "users", userCredential.user.uid), {
           uid: userCredential.user.uid,
           email,
@@ -47,23 +53,17 @@ function LoginFormContent() {
           createdAt: new Date().toISOString()
         });
 
-        // Redirect to the agent controller
+        toast({ title: "Agent Registered", description: "This device is now linked to your vault." });
         router.push("/device");
       } else {
-        // Login for Parents or already registered Child Agent
+        // Parent Login only on the Web
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
-        const userData = userDoc.data();
-        
-        // If parent login from website, go to dashboard
-        // Note: In this simple implementation, the account created on the app 
-        // acts as both child and parent identity for ease of use as requested.
         router.push("/dashboard");
       }
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Authentication Failed",
+        title: "Auth Error",
         description: error.message
       });
     } finally {
@@ -72,65 +72,58 @@ function LoginFormContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <Card className="w-full max-w-md bg-card border-white/5 shadow-2xl">
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center p-6 selection:bg-primary/30">
+      <Card className="w-full max-w-md bg-zinc-900/50 border-white/5 shadow-2xl backdrop-blur-xl">
         <CardHeader className="text-center">
-          <div className="mx-auto w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-4">
-            {isSignUp ? <Smartphone className="text-white w-7 h-7" /> : <Shield className="text-white w-7 h-7" />}
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mb-6 shadow-2xl shadow-primary/20">
+            {isAgentSetup ? <Smartphone className="text-white w-8 h-8" /> : <Shield className="text-white w-8 h-8" />}
           </div>
-          <CardTitle className="text-3xl font-bold">
-            {isSignUp ? "Agent Installation" : "Parent Login"}
+          <CardTitle className="text-3xl font-bold text-white tracking-tighter">
+            {isAgentSetup ? "Agent Setup" : "Parent Portal"}
           </CardTitle>
-          <CardDescription>
-            {isSignUp 
-              ? "Create a SafeGuard account for this device." 
-              : "Access the monitoring dashboard with your credentials."}
+          <CardDescription className="text-zinc-500 font-medium">
+            {isAgentSetup 
+              ? "Initialize this device into the SafeGuard fleet." 
+              : "Access real-time telemetry from your linked devices."}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email">Account Email</Label>
+              <Label htmlFor="email" className="text-zinc-400 text-xs font-black uppercase tracking-widest">Email Address</Label>
               <Input 
                 id="email" 
                 type="email" 
-                placeholder="name@example.com" 
+                placeholder="admin@safeguard.io" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-background/50 border-white/10 focus:border-primary"
+                className="bg-black/50 border-white/5 focus:border-primary h-12 rounded-xl"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-zinc-400 text-xs font-black uppercase tracking-widest">Vault Key</Label>
               <Input 
                 id="password" 
                 type="password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="bg-background/50 border-white/10 focus:border-primary"
+                className="bg-black/50 border-white/5 focus:border-primary h-12 rounded-xl"
               />
             </div>
-            <Button className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-bold" disabled={loading}>
-              {loading ? <Loader2 className="animate-spin" /> : (isSignUp ? "Register Managed Device" : "Authorize & Login")}
+            
+            <Button className="w-full h-14 bg-primary hover:bg-primary/90 text-white font-black rounded-2xl shadow-xl shadow-primary/10" disabled={loading}>
+              {loading ? <Loader2 className="animate-spin" /> : (isAgentSetup ? "REGISTER AGENT" : "AUTHENTICATE")}
             </Button>
             
-            {!isSignUp && (
-              <div className="text-center text-xs text-muted-foreground mt-4 leading-relaxed">
-                If you haven't installed the agent yet, please download the APK on your child's phone first.
-              </div>
-            )}
-            
-            {initialRole === "child" && (
-                <button 
-                  type="button"
-                  onClick={() => setIsSignUp(!isSignUp)}
-                  className="w-full text-xs text-primary hover:underline font-medium mt-2"
-                >
-                  {isSignUp ? "Already have an agent account? Sign In" : "Need to register this phone? Create account"}
-                </button>
-            )}
+            <div className="text-center">
+              <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest leading-relaxed">
+                {isAgentSetup 
+                  ? "This device will be visible to the master vault account." 
+                  : "Authorized personnel only. Logs are end-to-end encrypted."}
+              </p>
+            </div>
           </form>
         </CardContent>
       </Card>
@@ -140,7 +133,7 @@ function LoginFormContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin w-10 h-10 text-primary" /></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin w-10 h-10 text-primary" /></div>}>
       <LoginFormContent />
     </Suspense>
   );
