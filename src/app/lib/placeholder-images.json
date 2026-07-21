@@ -1,28 +1,16 @@
 {
   "placeholderImages": [
     {
-      "id": "hero-bg",
-      "description": "Futuristic 3D abstract obsidian shapes",
-      "imageUrl": "https://picsum.photos/seed/ooby-hero/1920/1080",
-      "imageHint": "futuristic 3D abstract"
+      "id": "safeguard-hero",
+      "description": "A high-tech digital shield protecting a family silhouette.",
+      "imageUrl": "https://picsum.photos/seed/safeguard-hero/1920/1080",
+      "imageHint": "security shield"
     },
     {
-      "id": "trend-3d",
-      "description": "3D shoe model interactive display",
-      "imageUrl": "https://picsum.photos/seed/trend-3d/800/600",
-      "imageHint": "3D product rendering"
-    },
-    {
-      "id": "trend-bento",
-      "description": "Bento box UI layout example",
-      "imageUrl": "https://picsum.photos/seed/trend-bento/800/600",
-      "imageHint": "bento grid layout"
-    },
-    {
-      "id": "trend-kinetic",
-      "description": "Kinetic typography motion background",
-      "imageUrl": "https://picsum.photos/seed/trend-kinetic/800/600",
-      "imageHint": "kinetic typography motion"
+      "id": "mobile-agent-ui",
+      "description": "A mobile screen showing the SafeGuard agent active notification.",
+      "imageUrl": "https://picsum.photos/seed/agent-ui/800/1200",
+      "imageHint": "mobile interface"
     }
   ]
 }

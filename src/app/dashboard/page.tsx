@@ -11,16 +11,20 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   MapPin, Battery, Clock, Smartphone, LogOut, 
-  ShieldCheck, Phone, MessageSquare, Bell, Play, Loader2, RefreshCw, Download, Plus, QrCode
+  ShieldCheck, Phone, MessageSquare, Bell, Play, Loader2, RefreshCw, Download, Plus, QrCode, Sparkles, AlertTriangle, CheckCircle2
 } from "lucide-react";
 import { format } from "date-fns";
 import { Navbar } from "@/components/Navbar";
+import { generateSafetyReport, type SafetyReportOutput } from "@/ai/flows/safety-report-flow";
+import { toast } from "@/hooks/use-toast";
 
 export default function ParentDashboard() {
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
   const router = useRouter();
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiReport, setAiReport] = useState<SafetyReportOutput | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login");
@@ -33,7 +37,6 @@ export default function ParentDashboard() {
 
   const { data: devices, loading: devicesLoading } = useCollection(devicesQuery);
 
-  // Auto-select first device
   useEffect(() => {
     if (devices && devices.length > 0 && !selectedDeviceId) {
       setSelectedDeviceId(devices[0].id);
@@ -57,6 +60,28 @@ export default function ParentDashboard() {
   const { data: sms } = useCollection(activityQueries.sms);
   const { data: notifs } = useCollection(activityQueries.notifs);
 
+  async function handleAiAnalysis() {
+    if (!currentDevice || !sms || !notifs) return;
+    setAiLoading(true);
+    try {
+      const logs = [
+        ...(sms || []).map(s => ({ type: 'SMS', content: s.messageBody, timestamp: s.timestamp, sender: s.phoneNumber })),
+        ...(notifs || []).map(n => ({ type: 'Notification', content: n.content, timestamp: n.timestamp, sender: n.appName }))
+      ];
+      const result = await generateSafetyReport({
+        deviceName: currentDevice.name,
+        recentLogs: logs
+      });
+      setAiReport(result);
+      toast({ title: "AI Analysis Complete", description: "Review the safety insights below." });
+    } catch (error) {
+      console.error(error);
+      toast({ variant: "destructive", title: "AI Analysis Failed", description: "Could not generate safety report." });
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   if (authLoading || devicesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -71,7 +96,6 @@ export default function ParentDashboard() {
 
       <main className="pt-28 pb-12 px-6 lg:px-12 max-w-7xl mx-auto space-y-12 animate-fade-in-up">
         
-        {/* Connection Wizard for new parents */}
         {(!devices || devices.length === 0) && (
           <Card className="bg-primary/5 border-dashed border-primary/30 rounded-[3rem] overflow-hidden">
             <CardContent className="p-12 text-center space-y-8">
@@ -97,7 +121,6 @@ export default function ParentDashboard() {
         )}
 
         <section className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Device Selection Sidebar */}
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em]">Family Devices</h2>
@@ -109,7 +132,10 @@ export default function ParentDashboard() {
               {devices && devices.map(device => (
                 <button
                   key={device.id}
-                  onClick={() => setSelectedDeviceId(device.id)}
+                  onClick={() => {
+                    setSelectedDeviceId(device.id);
+                    setAiReport(null);
+                  }}
                   className={`w-full text-left p-5 rounded-3xl border transition-all duration-300 ${
                     selectedDeviceId === device.id 
                     ? "bg-primary/10 border-primary shadow-[0_0_30px_rgba(139,92,246,0.1)] scale-[1.02]" 
@@ -135,7 +161,6 @@ export default function ParentDashboard() {
             </div>
           </div>
 
-          {/* Activity Center */}
           <div className="lg:col-span-3 space-y-8">
             {selectedDeviceId ? (
               <>
@@ -145,7 +170,18 @@ export default function ParentDashboard() {
                       <CardTitle className="text-2xl font-black">Activity Hub</CardTitle>
                       <CardDescription>Reviewing real-time logs for {currentDevice?.name}</CardDescription>
                     </div>
-                    <RefreshCw className="w-5 h-5 text-muted-foreground hover:rotate-180 transition-all cursor-pointer" />
+                    <div className="flex items-center gap-4">
+                      <Button 
+                        onClick={handleAiAnalysis} 
+                        disabled={aiLoading}
+                        variant="secondary" 
+                        className="bg-primary/20 text-primary hover:bg-primary/30 rounded-full font-bold"
+                      >
+                        {aiLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                        AI Safety Insight
+                      </Button>
+                      <RefreshCw className="w-5 h-5 text-muted-foreground hover:rotate-180 transition-all cursor-pointer" />
+                    </div>
                   </CardHeader>
                   <CardContent className="p-0">
                     <Tabs defaultValue="calls" className="w-full">
@@ -222,7 +258,53 @@ export default function ParentDashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Telemetry Grid */}
+                {aiReport && (
+                  <Card className="bg-primary/5 border-primary/20 rounded-[2.5rem] overflow-hidden animate-fade-in-up">
+                    <CardHeader className="p-8 border-b border-primary/10 flex flex-row items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Sparkles className="w-6 h-6 text-primary" />
+                        <CardTitle className="text-xl font-black">Safety Insight Report</CardTitle>
+                      </div>
+                      <Badge className="bg-primary text-white text-lg px-4 py-1">Safety Score: {aiReport.safetyScore}/100</Badge>
+                    </CardHeader>
+                    <CardContent className="p-8 space-y-8">
+                      <div className="space-y-2">
+                        <p className="text-xs font-black text-primary uppercase tracking-[0.2em]">Summary</p>
+                        <p className="text-muted-foreground leading-relaxed italic">"{aiReport.summary}"</p>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                          <p className="text-xs font-black text-destructive uppercase tracking-[0.2em] flex items-center gap-2">
+                            <AlertTriangle className="w-3 h-3" /> Potential Concerns
+                          </p>
+                          <ul className="space-y-2">
+                            {aiReport.concerns.map((c, i) => (
+                              <li key={i} className="text-sm flex items-start gap-3 bg-destructive/5 p-3 rounded-xl border border-destructive/10">
+                                <span className="text-destructive font-bold">•</span>
+                                <span>{c}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="space-y-4">
+                          <p className="text-xs font-black text-green-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                            <CheckCircle2 className="w-3 h-3" /> Recommendations
+                          </p>
+                          <ul className="space-y-2">
+                            {aiReport.recommendations.map((r, i) => (
+                              <li key={i} className="text-sm flex items-start gap-3 bg-green-500/5 p-3 rounded-xl border border-green-500/10">
+                                <span className="text-green-500 font-bold">•</span>
+                                <span>{r}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {currentDevice && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <Card className="bg-card border-white/5 rounded-[2.5rem] shadow-xl">
